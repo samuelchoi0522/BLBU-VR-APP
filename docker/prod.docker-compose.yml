@@ -2,7 +2,7 @@ services:
   frontend:
     image: blbu-vr-app-ui
     build:
-      context: ../BLBU_VR_APP_UI
+      context: ../blbu_vr_app_ui
       dockerfile: ../docker/VR-APP-UI.Dockerfile
     restart: always
     ports:
