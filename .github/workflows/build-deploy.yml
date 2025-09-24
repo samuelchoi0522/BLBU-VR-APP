@@ -1,0 +1,32 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  cleanup:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cleanup
+        run: |
+          docker system prune -a -f --filter "until=24h"
+  build:
+    runs-on: self-hosted
+    needs: cleanup
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          docker compose -f docker/production.docker-compose.yml build
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy
+        run: |
+          docker compose -f docker/production.docker-compose.yml down
+          docker compose -f docker/production.docker-compose.yml up -d --build
