@@ -1,0 +1,34 @@
+services:
+  frontend:
+    image: blbu-vr-app-ui
+    build:
+      context: ../BLBU_VR_APP_UI
+      dockerfile: ../docker/VR-APP-UI.Dockerfile
+    restart: always
+    ports:
+      - '3000:3000'
+
+  api:
+    image: blbu-vr-app-service
+    build:
+      context: ../BLBU_VR_APP_SERVICE
+      dockerfile: ../docker/VR-APP-SERVICE.Dockerfile
+    restart: always
+    ports:
+      - '8080:8080'
+    environment:
+      MYSQL_HOST: db
+
+  db:
+    image: mysql:8.4.2
+    command: --mysql-native-password=ON
+    restart: always
+    ports:
+      - '3307:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: blbu_vr_app
+    volumes:
+      - mysql-data:/var/lib/mysql
+volumes:
+  mysql-data:
