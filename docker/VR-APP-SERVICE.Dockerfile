@@ -6,6 +6,6 @@ RUN ./gradlew build --no-daemon -p .
 
 FROM openjdk:22
 WORKDIR /app
-COPY --from=build /build/libs/VR-APP-SERVICE-1.0.0-SNAPSHOT.jar app.jar
+COPY --from=build /build/build/libs/VR-APP-SERVICE-1.0.0-SNAPSHOT.jar app.jar
 
 ENTRYPOINT exec java $JAVA_OPTS -jar app.jar
