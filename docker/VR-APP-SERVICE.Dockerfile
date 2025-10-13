@@ -1,11 +1,11 @@
 FROM gradle:8.9.0-jdk22 AS build
 WORKDIR /build
 COPY . .
-
-RUN ./gradlew build --no-daemon -p .
+WORKDIR /build/BLBU_VR_APP_SERVICE
+RUN ./gradlew clean build --no-daemon
 
 FROM openjdk:22
 WORKDIR /app
-COPY --from=build /build/build/libs/VR-APP-SERVICE-1.0.0-SNAPSHOT.jar app.jar
+COPY --from=build /build/BLBU_VR_APP_SERVICE/build/libs/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
 
-ENTRYPOINT exec java $JAVA_OPTS -jar app.jar
