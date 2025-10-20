@@ -34,7 +34,7 @@ services:
     ports:
       - '3307:3306'
     env_file:
-      - .env
+      - ../.env
     environment:
       MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-blbu_vr_app}
