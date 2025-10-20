@@ -25,7 +25,10 @@ services:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://db:3306/blbu_vr_app}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/blbu-key.json
       FRONTEND_URL: ${FRONTEND_URL:-https://blbu-vr-app.duckdns.org}
+    volumes:
+      - /home/blbu202508/blbu-key.json:/app/config/blbu-key.json:ro
 
   db:
     image: mysql:8.4.2
