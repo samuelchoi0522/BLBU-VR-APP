@@ -25,7 +25,7 @@ jobs:
           echo "SPRING_PROFILES_ACTIVE=prod" > .env
           echo "SERVER_PORT=8080" >> .env
           echo "FRONTEND_URL=https://blbu-vr-app.duckdns.org" >> .env
-          echo "SPRING_DATASOURCE_URL=jdbc:mysql://db:3307/blbu_vr_app" >> .env
+          echo "SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3307/blbu_vr_app" >> .env
           echo "SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
           echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "GOOGLE_APPLICATION_CREDENTIALS=/app/config/blbu-key.json" >> .env
