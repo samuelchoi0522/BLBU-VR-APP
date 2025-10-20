@@ -28,9 +28,6 @@ jobs:
           echo "SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/blbu_vr_app" >> .env
           echo "SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
           echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/app/config/blbu-key.json" >> .env
-          echo "GCS_BUCKET_NAME=vr_therapy_videos" >> .env
-          echo "GCP_PROJECT_ID=adopt-dont-shop-450021" >> .env
           echo "SPRING_SESSION_JDBC_INITIALIZE_SCHEMA=always" >> .env
           echo "SPRING_SESSION_STORE_TYPE=jdbc" >> .env
           echo "SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=2GB" >> .env
