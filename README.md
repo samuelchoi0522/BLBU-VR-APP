@@ -1,2 +1,2 @@
-# BLBU-VR-APP-SERVICE
-The service for the BLBU VR App.
+# BLBU-VR-APP
+The BLBU VR App.

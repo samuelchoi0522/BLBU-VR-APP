@@ -13,14 +13,34 @@ jobs:
       - name: Cleanup
         run: |
           docker system prune -a -f --filter "until=24h"
+
   build:
     runs-on: self-hosted
     needs: cleanup
     steps:
       - uses: actions/checkout@v3
+
+      - name: Generate .env file
+        run: |
+          echo "SPRING_PROFILES_ACTIVE=prod" > .env
+          echo "SERVER_PORT=8080" >> .env
+          echo "FRONTEND_URL=https://blbu-vr-app.duckdns.org" >> .env
+          echo "SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/blbu_vr_app" >> .env
+          echo "SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/app/config/blbu-key.json" >> .env
+          echo "GCS_BUCKET_NAME=vr_therapy_videos" >> .env
+          echo "GCP_PROJECT_ID=adopt-dont-shop-450021" >> .env
+          echo "SPRING_SESSION_JDBC_INITIALIZE_SCHEMA=always" >> .env
+          echo "SPRING_SESSION_STORE_TYPE=jdbc" >> .env
+          echo "SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=2GB" >> .env
+          echo "SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=2GB" >> .env
+          echo "SERVER_TOMCAT_MAX_SWALLOW_SIZE=2GB" >> .env
+
       - name: Build
         run: |
           docker compose -f docker/prod.docker-compose.yml build
+
   deploy:
     runs-on: self-hosted
     needs: build
