@@ -29,6 +29,7 @@ jobs:
           echo "SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
           echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "SPRING_SESSION_JDBC_INITIALIZE_SCHEMA=always" >> .env
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/app/config/blbu-key.json" >> .env
           echo "SPRING_SESSION_STORE_TYPE=jdbc" >> .env
           echo "SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=2GB" >> .env
           echo "SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=2GB" >> .env
