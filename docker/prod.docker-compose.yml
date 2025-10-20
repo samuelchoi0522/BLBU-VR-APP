@@ -41,5 +41,19 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
 
+  caddy:
+    image: caddy:2.8.4
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - frontend
+
 volumes:
   mysql-data:
