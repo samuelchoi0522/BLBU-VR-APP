@@ -37,9 +37,6 @@ jobs:
           echo "SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=2GB" >> .env
           echo "SERVER_TOMCAT_MAX_SWALLOW_SIZE=2GB" >> .env
 
-          mkdir -p app/config
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > app/config/blbu-key.json
-
       - name: Build
         run: |
           docker compose -f docker/prod.docker-compose.yml build
