@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -13,19 +13,12 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.4",
     "@mui/material": "^7.3.4",
-    "@mui/styled-engine": "^7.3.3",
-    "next": "15.5.4",
-    "next-auth": "^4.24.11",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "recharts": "^3.3.0",
-    "tailwindcss": "^4.1.15"
+    "next": "16.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@typescript-eslint/parser": "^8.46.2",
     "eslint": "^9",
-    "eslint-config-next": "15.5.4",
-    "typescript": "^5.9.3"
+    "eslint-config-next": "16.0.0"
   }
 }
