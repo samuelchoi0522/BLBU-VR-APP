@@ -34,6 +34,7 @@ jobs:
           echo "SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=2GB" >> .env
           echo "SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=2GB" >> .env
           echo "SERVER_TOMCAT_MAX_SWALLOW_SIZE=2GB" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
 
       - name: Build
         run: |
