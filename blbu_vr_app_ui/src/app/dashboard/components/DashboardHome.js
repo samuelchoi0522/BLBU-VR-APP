@@ -1,4 +1,7 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Box,
     Grid,
@@ -13,9 +16,64 @@ import {
     TableCell,
     TableBody,
     TableContainer,
+    CircularProgress,
 } from "@mui/material";
 
 export default function DashboardHome({ setActiveTab }) {
+    const [loading, setLoading] = useState(true);
+    const router = useRouter();
+
+    const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
+    // ✅ Session check
+    useEffect(() => {
+        const verifySession = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                router.push("/");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/check-session`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem("token");
+                    router.push("/");
+                    return;
+                }
+
+                // Session is valid
+                setLoading(false);
+            } catch (err) {
+                console.error("Session verification failed:", err);
+                localStorage.removeItem("token");
+                router.push("/");
+            }
+        };
+
+        verifySession();
+    }, [router, API_BASE_URL]);
+
+    if (loading) {
+        return (
+            <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height="100vh"
+            >
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    // ✅ Dashboard content (only rendered if session valid)
     const summaryData = [
         { title: "Total Videos", value: "1,250" },
         { title: "Active Users", value: "875" },
@@ -33,6 +91,7 @@ export default function DashboardHome({ setActiveTab }) {
                 Dashboard
             </Typography>
 
+            {/* Summary Cards */}
             <Grid container spacing={2} mb={3}>
                 {summaryData.map((item, idx) => (
                     <Grid item xs={12} sm={4} key={idx}>
@@ -48,6 +107,7 @@ export default function DashboardHome({ setActiveTab }) {
                 ))}
             </Grid>
 
+            {/* Quick Actions */}
             <Box mb={3}>
                 <Typography variant="h6" gutterBottom>
                     Quick Actions
@@ -60,6 +120,7 @@ export default function DashboardHome({ setActiveTab }) {
                 </Button>
             </Box>
 
+            {/* Recent Activity */}
             <Box>
                 <Typography variant="h6" gutterBottom>
                     Recent Activity
