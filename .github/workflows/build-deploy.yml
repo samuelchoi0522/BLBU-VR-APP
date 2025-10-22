@@ -47,5 +47,6 @@ jobs:
     steps:
       - name: Deploy
         run: |
-          docker compose -f docker/prod.docker-compose.yml down
-          docker compose -f docker/prod.docker-compose.yml up -d --build
+          cd /home/blbu202508/actions-runner/_work/BLBU-VR-APP/BLBU-VR-APP
+          docker compose --env-file .env -f docker/prod.docker-compose.yml down
+          docker compose --env-file .env -f docker/prod.docker-compose.yml up -d --build
