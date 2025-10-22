@@ -35,6 +35,7 @@ jobs:
           echo "SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=2GB" >> .env
           echo "SERVER_TOMCAT_MAX_SWALLOW_SIZE=2GB" >> .env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "NEXT_PUBLIC_API_BASE_URL=https://blbu-vr-app.duckdns.org" >> .env
 
       - name: Build
         run: |

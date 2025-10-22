@@ -7,17 +7,49 @@ import {
     Button,
     Typography,
     Paper,
+    Alert,
 } from "@mui/material";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
-    const handleSubmit = (e) => {
+    // ✅ Check for environment variable first, then fallback
+    const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Email:", email);
-        console.log("Password:", password);
-        // You can replace this with your actual login logic (API call, etc.)
+        setError("");
+        setSuccess("");
+        setLoading(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Login failed");
+            }
+
+            localStorage.setItem("token", data.token);
+            setSuccess("Login successful!");
+            console.log("JWT Token:", data.token);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -46,6 +78,17 @@ export default function LoginPage() {
                     Login
                 </Typography>
 
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+                {success && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                        {success}
+                    </Alert>
+                )}
+
                 <form onSubmit={handleSubmit}>
                     <TextField
                         label="Email"
@@ -73,8 +116,9 @@ export default function LoginPage() {
                         color="primary"
                         fullWidth
                         sx={{ mt: 3 }}
+                        disabled={loading}
                     >
-                        Login
+                        {loading ? "Logging in..." : "Login"}
                     </Button>
                 </form>
             </Paper>
