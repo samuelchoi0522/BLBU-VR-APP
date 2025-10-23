@@ -1,12 +1,25 @@
 FROM node:20 AS build
 WORKDIR /build
+
+COPY package.json yarn.lock ./
+RUN yarn config set network-timeout 6000000 && yarn install
+
 COPY . .
 
-RUN yarn config set network-timeout 6000000 && yarn install
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
+RUN echo "Building with NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}"
+
 RUN yarn run build
 
 FROM node:20
 WORKDIR /app
-COPY --from=build /build .
 
-ENTRYPOINT exec yarn start
+COPY --from=build /build ./
+
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
+EXPOSE 3000
+ENTRYPOINT ["yarn", "start"]
+

@@ -4,6 +4,8 @@ services:
     build:
       context: ../blbu_vr_app_ui
       dockerfile: ../docker/VR-APP-UI.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://blbu-vr-app.duckdns.org}
     env_file:
       - ../.env
     environment:
