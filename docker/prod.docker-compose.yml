@@ -4,6 +4,10 @@ services:
     build:
       context: ../blbu_vr_app_ui
       dockerfile: ../docker/VR-APP-UI.Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://blbu-vr-app.duckdns.org}
     restart: always
     ports:
       - '3000:3000'
@@ -27,6 +31,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
       GOOGLE_APPLICATION_CREDENTIALS: /app/config/blbu-key.json
       FRONTEND_URL: ${FRONTEND_URL:-https://blbu-vr-app.duckdns.org}
+      JWT_SECRET: ${JWT_SECRET}
     volumes:
       - /home/blbu202508/blbu-key.json:/app/config/blbu-key.json:ro
 
