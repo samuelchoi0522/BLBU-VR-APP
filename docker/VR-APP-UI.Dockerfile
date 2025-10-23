@@ -1,7 +1,6 @@
 FROM node:20 AS build
 WORKDIR /build
 
-COPY package.json yarn.lock ./
 RUN yarn config set network-timeout 6000000 && yarn install
 
 COPY . .
