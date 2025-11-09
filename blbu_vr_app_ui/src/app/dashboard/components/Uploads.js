@@ -29,6 +29,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
+import EditVideoModal from "./EditVideoModal";
 
 export default function Uploads() {
     const [file, setFile] = useState(null);
@@ -39,6 +40,8 @@ export default function Uploads() {
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [deleteDialog, setDeleteDialog] = useState({ open: false, video: null });
+    const [editDialog, setEditDialog] = useState({ open: false, video: null });
+    const [uploading, setUploading] = useState(false);
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -55,21 +58,16 @@ export default function Uploads() {
             const token = localStorage.getItem("token");
             const res = await fetch(`${API_BASE_URL}/api/videos/file/${encodeURIComponent(video.filename)}`, {
                 method: "DELETE",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { Authorization: `Bearer ${token}` },
             });
 
             if (res.ok) {
                 setSnack({ open: true, msg: "Video deleted successfully", severity: "success" });
                 fetchVideos();
-            }
-            else {
+            } else {
                 setSnack({ open: true, msg: "Failed to delete video", severity: "error" });
             }
-        }
-        catch (error) {
-            console.error("Error deleting video:", error);
+        } catch (err) {
             setSnack({ open: true, msg: "Error deleting video", severity: "error" });
         } finally {
             setDeleteDialog({ open: false, video: null });
@@ -120,18 +118,9 @@ export default function Uploads() {
 
     const formatDateOnly = (dateString) => {
         if (!dateString) return "N/A";
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString("en-US", {
-                timeZone: "America/Chicago",
-                year: "numeric",
-                month: "long",
-                day: "numeric"
-            });
-        } catch (error) {
-            return dateString;
-        }
+        return dayjs(dateString, "YYYY-MM-DD").format("MMMM D, YYYY");
     };
+
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -155,6 +144,8 @@ export default function Uploads() {
             return;
         }
 
+        setUploading(true);
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("title", title);
@@ -169,25 +160,16 @@ export default function Uploads() {
             });
 
             if (res.ok) {
-                // Check if response is JSON or text
-                const contentType = res.headers.get("content-type");
-                if (contentType && contentType.includes("application/json")) {
-                    const data = await res.json();
-                    setSnack({ open: true, msg: data.message || "Upload successful!", severity: "success" });
-                } else {
-                    // Handle plain text response
-                    const text = await res.text();
-                    setSnack({ open: true, msg: "Upload successful!", severity: "success" });
-                }
+                setSnack({ open: true, msg: "Upload successful!", severity: "success" });
                 handleRemoveFile();
-                // Refresh video list
                 fetchVideos();
             } else {
                 setSnack({ open: true, msg: "Upload failed", severity: "error" });
             }
         } catch (err) {
-            console.error("Upload error:", err);
             setSnack({ open: true, msg: "Error uploading file", severity: "error" });
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -320,13 +302,19 @@ export default function Uploads() {
                                 color="primary"
                                 onClick={handleUpload}
                                 fullWidth
+                                disabled={!file || !title || !date || uploading}
                                 sx={{ py: 1.2, borderRadius: 2 }}
                             >
-                                Upload Video
+                                {uploading ? (
+                                    <CircularProgress size={24} sx={{ color: "#fff" }} />
+                                ) : (
+                                    "Upload Video"
+                                )}
                             </Button>
                         </Box>
                     )}
                 </Box>
+
 
                 {/* Existing Videos Section */}
                 <Typography variant="h6" gutterBottom>
@@ -344,9 +332,9 @@ export default function Uploads() {
                                 <TableRow>
                                     <TableCell>Title</TableCell>
                                     <TableCell>Filename</TableCell>
-                                    <TableCell>Assigned Date</TableCell>
-                                    <TableCell>Created At</TableCell>
-                                    <TableCell>Updated At</TableCell>
+                                    <TableCell>Date Created</TableCell>
+                                    <TableCell>Last Updated</TableCell>
+                                    <TableCell>Date Assigned</TableCell>
                                     <TableCell align="center">Actions</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -364,9 +352,9 @@ export default function Uploads() {
                                         <TableRow key={video.id}>
                                             <TableCell>{video.title || "Untitled"}</TableCell>
                                             <TableCell>{video.filename}</TableCell>
-                                            <TableCell>{formatDateOnly(video.assignedDate)}</TableCell>
                                             <TableCell>{formatDateToCST(video.createdAt)}</TableCell>
                                             <TableCell>{formatDateToCST(video.updatedAt)}</TableCell>
+                                            <TableCell>{formatDateOnly(video.assignedDate)}</TableCell>
                                             <TableCell align="center">
                                                 <Box display="flex" justifyContent="center" gap={1}>
                                                     <IconButton
@@ -376,9 +364,16 @@ export default function Uploads() {
                                                     >
                                                         <VisibilityIcon />
                                                     </IconButton>
-                                                    <IconButton size="small" title="Edit video">
+
+                                                    <IconButton
+                                                        size="small"
+                                                        title="Edit video"
+                                                        onClick={() => setEditDialog({ open: true, video })}
+                                                    >
                                                         <EditIcon />
                                                     </IconButton>
+
+
                                                     <IconButton
                                                         size="small"
                                                         color="error"
@@ -397,6 +392,15 @@ export default function Uploads() {
                     </TableContainer>
                 )}
             </Box>
+            {editDialog.open && (
+                <EditVideoModal
+                    open={editDialog.open}
+                    video={editDialog.video}
+                    onClose={() => setEditDialog({ open: false, video: null })}
+                    onUpdated={fetchVideos}
+                />
+            )}
+
         </LocalizationProvider>
     );
 }

@@ -36,12 +36,19 @@ public class VideoController {
 
     @PutMapping("/assign")
     public ResponseEntity<String> updateAssignment(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(defaultValue = "false") boolean compress,
+            @RequestParam("filename") String filename,
             @RequestParam("title") String title,
-            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return assignVideoToDate(file, compress, title, date);
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        try {
+            videoService.updateMetadata(filename, title, date);
+            return ResponseEntity.ok("Updated video metadata");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error updating video: " + e.getMessage());
+        }
     }
+
 
     @GetMapping("/today")
     public ResponseEntity<String> getTodaysVideo() {

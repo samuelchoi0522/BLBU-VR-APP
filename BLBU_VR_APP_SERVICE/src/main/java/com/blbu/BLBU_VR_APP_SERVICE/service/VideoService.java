@@ -4,12 +4,14 @@ import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.util.VideoCompressor;
 import com.google.cloud.storage.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -148,4 +150,18 @@ public class VideoService {
             return false;
         }
     }
+
+    public String updateMetadata(String filename, String newTitle, LocalDate newDate) {
+        VideoMetadata metadata = repository.findByFilename(filename)
+                .orElseThrow(() -> new RuntimeException("Video not found for filename: " + filename));
+
+        metadata.setTitle(newTitle);
+        metadata.setAssignedDate(newDate);
+        metadata.setUpdatedAt(LocalDateTime.now());
+
+        repository.save(metadata);
+
+        return "Updated metadata for video: " + filename;
+    }
+
 }

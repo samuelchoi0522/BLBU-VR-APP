@@ -18,6 +18,7 @@ import {
     TableContainer,
     CircularProgress,
 } from "@mui/material";
+import dayjs from "dayjs";
 
 export default function DashboardHome({ setActiveTab }) {
     const [loading, setLoading] = useState(true);
@@ -51,22 +52,9 @@ export default function DashboardHome({ setActiveTab }) {
         }
     };
 
-    // ✅ Format date only (no time)
     const formatDateOnly = (dateString) => {
         if (!dateString) return "N/A";
-
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString("en-US", {
-                timeZone: "America/Chicago",
-                year: "numeric",
-                month: "long",
-                day: "numeric"
-            });
-        } catch (error) {
-            console.error("Error formatting date:", error);
-            return dateString;
-        }
+        return dayjs(dateString, "YYYY-MM-DD").format("MMMM D, YYYY");
     };
 
     // ✅ Session check + load counts
