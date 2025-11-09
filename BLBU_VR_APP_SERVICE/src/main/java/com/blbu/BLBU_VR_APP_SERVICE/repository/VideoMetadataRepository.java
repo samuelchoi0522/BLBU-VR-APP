@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface VideoMetadataRepository extends JpaRepository<VideoMetadata, Long> {
     Optional<VideoMetadata> findByAssignedDate(LocalDate date);
+    Optional<VideoMetadata> findByFilename(String filename);
 }

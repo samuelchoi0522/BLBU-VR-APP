@@ -62,6 +62,12 @@ public class AuthController {
                 "message", "Session is active"
         ));
     }
+
+    @GetMapping("/get-total-users")
+    public ResponseEntity<?> getTotalUsers() {
+        long totalUsers = userService.getTotalUsers();
+        return ResponseEntity.ok(Map.of("totalUsers", totalUsers));
+    }
 }
 
 @Data

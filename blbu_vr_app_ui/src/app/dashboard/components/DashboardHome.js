@@ -21,14 +21,57 @@ import {
 
 export default function DashboardHome({ setActiveTab }) {
     const [loading, setLoading] = useState(true);
+    const [videoCount, setVideoCount] = useState(0);
+    const [userCount, setUserCount] = useState(0);
+    const [videos, setVideos] = useState([]);
+
     const router = useRouter();
 
     const API_BASE_URL =
         process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-    // ✅ Session check
+    // ✅ Format date to CST timezone (Month DD, YYYY HH:MM AM/PM)
+    const formatDateToCST = (dateString) => {
+        if (!dateString) return "N/A";
+
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleString("en-US", {
+                timeZone: "America/Chicago",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true
+            });
+        } catch (error) {
+            console.error("Error formatting date:", error);
+            return dateString;
+        }
+    };
+
+    // ✅ Format date only (no time)
+    const formatDateOnly = (dateString) => {
+        if (!dateString) return "N/A";
+
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString("en-US", {
+                timeZone: "America/Chicago",
+                year: "numeric",
+                month: "long",
+                day: "numeric"
+            });
+        } catch (error) {
+            console.error("Error formatting date:", error);
+            return dateString;
+        }
+    };
+
+    // ✅ Session check + load counts
     useEffect(() => {
-        const verifySession = async () => {
+        const verifySessionAndLoadData = async () => {
             const token = localStorage.getItem("token");
             if (!token) {
                 router.push("/");
@@ -48,7 +91,13 @@ export default function DashboardHome({ setActiveTab }) {
                     return;
                 }
 
-                // Session is valid
+                // ✅ Call API functions
+                await Promise.all([
+                    fetchVideoCount(token),
+                    fetchUserCount(token),
+                    fetchAllVideos(token),
+                ]);
+
                 setLoading(false);
             } catch (err) {
                 console.error("Session verification failed:", err);
@@ -57,32 +106,75 @@ export default function DashboardHome({ setActiveTab }) {
             }
         };
 
-        verifySession();
+        verifySessionAndLoadData();
     }, [router, API_BASE_URL]);
+
+    // ✅ Load total videos count
+    const fetchVideoCount = async (token) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/videos/count`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.ok) {
+                const count = await res.json();
+                setVideoCount(count);
+            }
+        } catch (error) {
+            console.error("Error fetching video count:", error);
+        }
+    };
+
+    // ✅ Load total users count
+    const fetchUserCount = async (token) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/get-total-users`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.ok) {
+                const count = await res.json();
+                setUserCount(count.totalUsers);
+            }
+        } catch (error) {
+            console.error("Error fetching user count:", error);
+        }
+    };
+
+    const fetchAllVideos = async (token) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/videos/get-all-videos`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+
+                // ✅ Sort videos by updatedAt (most recent first)
+                const sortedVideos = data.sort((a, b) => {
+                    const dateA = new Date(a.updatedAt);
+                    const dateB = new Date(b.updatedAt);
+                    return dateB - dateA; // Descending order
+                });
+
+                setVideos(sortedVideos);
+            }
+        } catch (error) {
+            console.error("Error fetching videos:", error);
+        }
+    };
 
     if (loading) {
         return (
-            <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                height="100vh"
-            >
+            <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
                 <CircularProgress />
             </Box>
         );
     }
 
-    // ✅ Dashboard content (only rendered if session valid)
     const summaryData = [
-        { title: "Total Videos", value: "1,250" },
-        { title: "Active Users", value: "875" },
-        { title: "New Uploads Today", value: "15" },
-    ];
-
-    const recentActivity = [
-        { title: "Exploring the Cosmos", uploader: "Dr. Anya Sharma", views: "5,234", date: "2024-07-26" },
-        { title: "Culinary Delights", uploader: "Chef Marco Rossi", views: "3,876", date: "2024-07-25" },
+        { title: "Total Videos", value: videoCount },
+        { title: "Total Users", value: userCount }
     ];
 
     return (
@@ -115,35 +207,44 @@ export default function DashboardHome({ setActiveTab }) {
                 <Button variant="contained" sx={{ mr: 2 }} onClick={() => setActiveTab("upload")}>
                     Upload New Video
                 </Button>
-                <Button variant="outlined" onClick={() => setActiveTab("users")}>
-                    View User Data
-                </Button>
             </Box>
 
             {/* Recent Activity */}
             <Box>
                 <Typography variant="h6" gutterBottom>
-                    Recent Activity
+                    Recent Videos
                 </Typography>
                 <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
                     <Table>
                         <TableHead>
                             <TableRow>
                                 <TableCell>Video Title</TableCell>
-                                <TableCell>Uploader</TableCell>
-                                <TableCell>Views</TableCell>
-                                <TableCell>Date Uploaded</TableCell>
+                                <TableCell>Video Filename</TableCell>
+                                <TableCell>Date Created</TableCell>
+                                <TableCell>Last Updated</TableCell>
+                                <TableCell>Date Assigned</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {recentActivity.map((row, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{row.title}</TableCell>
-                                    <TableCell>{row.uploader}</TableCell>
-                                    <TableCell>{row.views}</TableCell>
-                                    <TableCell>{row.date}</TableCell>
+                            {videos.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} align="center">
+                                        <Typography color="text.secondary" py={3}>
+                                            No videos uploaded yet
+                                        </Typography>
+                                    </TableCell>
                                 </TableRow>
-                            ))}
+                            ) : (
+                                videos.map((video, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{video.title}</TableCell>
+                                        <TableCell>{video.filename}</TableCell>
+                                        <TableCell>{formatDateToCST(video.createdAt)}</TableCell>
+                                        <TableCell>{formatDateToCST(video.updatedAt)}</TableCell>
+                                        <TableCell>{formatDateOnly(video.assignedDate)}</TableCell>
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                 </TableContainer>

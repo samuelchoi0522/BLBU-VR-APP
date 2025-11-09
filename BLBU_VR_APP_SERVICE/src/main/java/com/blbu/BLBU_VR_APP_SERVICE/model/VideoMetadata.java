@@ -22,6 +22,7 @@ public class VideoMetadata {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String title;
     private String filename;
     private String gcsUrl;
 

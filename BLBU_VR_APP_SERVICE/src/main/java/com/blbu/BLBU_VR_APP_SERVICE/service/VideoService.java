@@ -24,7 +24,7 @@ public class VideoService {
         this.repository = repository;
     }
 
-    public String uploadAndAssignVideo(MultipartFile file, boolean compress, LocalDate date) throws IOException {
+    public String uploadAndAssignVideo(MultipartFile file, String title, boolean compress, LocalDate date) throws IOException {
         File tempFile = convertToFile(file);
         File uploadFile = compress ? VideoCompressor.compress(tempFile) : tempFile;
 
@@ -33,7 +33,7 @@ public class VideoService {
                 .setContentType(file.getContentType())
                 .build();
 
-        System.out.println("Uploading to GCS bucket=" + bucketName + " object=" + uploadFile.getName());
+        System.out.println("Uploading to GCS bucket=" + bucketName + " object=" + uploadFile.getName() + " title=" + title);
         storage.create(blobInfo, Files.readAllBytes(uploadFile.toPath()));
 
         String gcsUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, uploadFile.getName());
@@ -42,6 +42,7 @@ public class VideoService {
         Optional<VideoMetadata> existing = repository.findByAssignedDate(date);
         VideoMetadata metadata = existing.orElse(new VideoMetadata());
         metadata.setFilename(uploadFile.getName());
+        metadata.setTitle(title);
         metadata.setGcsUrl(gcsUrl);
         metadata.setAssignedDate(date);
         repository.save(metadata);
@@ -113,4 +114,38 @@ public class VideoService {
         }
     }
 
+    public int getTotalVideoCount() {
+        return (int) repository.count();
+    }
+
+    public Iterable<VideoMetadata> getAllVideos() {
+        return repository.findAll();
+    }
+
+    public boolean deleteVideoByFilename(String filename) {
+        Optional<VideoMetadata> existing = repository.findByFilename(filename);
+        if (existing.isEmpty()) {
+            System.out.println("No video metadata found for filename: " + filename);
+            return false;
+        }
+
+        VideoMetadata metadata = existing.get();
+        System.out.println("Deleting video: " + filename + " from bucket=" + bucketName);
+
+        try {
+            // Delete from GCS
+            boolean deleted = storage.delete(BlobId.of(bucketName, filename));
+            if (!deleted) {
+                System.out.println("️GCS object not found or already deleted: " + filename);
+            }
+
+            // Delete from DB
+            repository.delete(metadata);
+            System.out.println("Deleted metadata and video for filename: " + filename);
+            return true;
+        } catch (Exception e) {
+            System.out.println("Failed to delete video: " + e.getMessage());
+            return false;
+        }
+    }
 }

@@ -19,7 +19,8 @@ public class CorsConfig {
                                 "https://blbu-vr-app.duckdns.org"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*");
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }

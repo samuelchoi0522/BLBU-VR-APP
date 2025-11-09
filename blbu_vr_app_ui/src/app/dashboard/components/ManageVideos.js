@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     Typography,
     Table,
@@ -10,19 +10,55 @@ import {
     Paper,
     Chip,
     Box,
+    IconButton,
+    CircularProgress,
+    Snackbar,
+    Alert
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 export default function ManageVideos() {
-    const videos = [
-        { title: "Exploring the Mountains", status: "Published", visibility: "Public", date: "2023-08-15" },
-        { title: "Cooking Masterclass", status: "Draft", visibility: "Private", date: "2023-07-22" },
-    ];
+    const [videos, setVideos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
+
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
+    useEffect(() => {
+        fetchVideos();
+    }, []);
+
+    const fetchVideos = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/videos/get-all-videos`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const sortedVideos = data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+                setVideos(sortedVideos);
+            } else {
+                setSnack({ open: true, msg: "Failed to load videos", severity: "error" });
+            }
+        } catch (err) {
+            setSnack({ open: true, msg: "Error fetching videos", severity: "error" });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <>
+            <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack({ ...snack, open: false })}>
+                <Alert severity={snack.severity} variant="filled">{snack.msg}</Alert>
+            </Snackbar>
+
             <Typography variant="h4" fontWeight="bold" gutterBottom>
                 Manage Videos
             </Typography>
@@ -30,44 +66,60 @@ export default function ManageVideos() {
                 Edit, update, or delete your uploaded videos.
             </Typography>
 
-            <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Title</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Visibility</TableCell>
-                            <TableCell>Date</TableCell>
-                            <TableCell align="center">Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {videos.map((video, idx) => (
-                            <TableRow key={idx}>
-                                <TableCell>{video.title}</TableCell>
-                                <TableCell>
-                                    <Chip label={video.status} color={video.status === "Published" ? "primary" : "default"} />
-                                </TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={video.visibility}
-                                        variant="outlined"
-                                        color={video.visibility === "Public" ? "primary" : "secondary"}
-                                    />
-                                </TableCell>
-                                <TableCell>{video.date}</TableCell>
-                                <TableCell align="center">
-                                    <Box display="flex" justifyContent="center" gap={1}>
-                                        <VisibilityIcon sx={{ cursor: "pointer" }} />
-                                        <EditIcon sx={{ cursor: "pointer" }} />
-                                        <DeleteIcon sx={{ cursor: "pointer", color: "error.main" }} />
-                                    </Box>
-                                </TableCell>
+            {loading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" height={200}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Title</TableCell>
+                                <TableCell>Filename</TableCell>
+                                <TableCell>Assigned Date</TableCell>
+                                <TableCell>Created At</TableCell>
+                                <TableCell>Updated At</TableCell>
+                                <TableCell align="center">Actions</TableCell>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                            {videos.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} align="center">
+                                        <Typography color="text.secondary" py={3}>
+                                            No videos uploaded yet
+                                        </Typography>
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                videos.map((video) => (
+                                    <TableRow key={video.id}>
+                                        <TableCell>{video.title || "Untitled"}</TableCell>
+                                        <TableCell>{video.filename}</TableCell>
+                                        <TableCell>{video.assignedDate}</TableCell>
+                                        <TableCell>{new Date(video.createdAt).toLocaleString()}</TableCell>
+                                        <TableCell>{new Date(video.updatedAt).toLocaleString()}</TableCell>
+                                        <TableCell align="center">
+                                            <Box display="flex" justifyContent="center" gap={1}>
+                                                <IconButton size="small" onClick={() => window.open(video.gcsUrl, '_blank')}>
+                                                    <VisibilityIcon />
+                                                </IconButton>
+                                                <IconButton size="small">
+                                                    <EditIcon />
+                                                </IconButton>
+                                                <IconButton size="small" color="error">
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            )}
         </>
     );
 }

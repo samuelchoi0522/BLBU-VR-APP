@@ -23,9 +23,10 @@ public class VideoController {
     public ResponseEntity<String> assignVideoToDate(
             @RequestParam("file") MultipartFile file,
             @RequestParam(defaultValue = "false") boolean compress,
+            @RequestParam("title") String title,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         try {
-            String url = videoService.uploadAndAssignVideo(file, compress, date);
+            String url = videoService.uploadAndAssignVideo(file, title, compress, date);
             return ResponseEntity.ok("Assigned video for " + date + " at " + url);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -37,8 +38,9 @@ public class VideoController {
     public ResponseEntity<String> updateAssignment(
             @RequestParam("file") MultipartFile file,
             @RequestParam(defaultValue = "false") boolean compress,
+            @RequestParam("title") String title,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return assignVideoToDate(file, compress, date);
+        return assignVideoToDate(file, compress, title, date);
     }
 
     @GetMapping("/today")
@@ -66,7 +68,7 @@ public class VideoController {
         }
     }
 
-    @DeleteMapping("/{date}")
+    @DeleteMapping("/date/{date}")
     public ResponseEntity<String> deleteVideoForDate(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         try {
@@ -82,4 +84,42 @@ public class VideoController {
                     .body("Error deleting video: " + e.getMessage());
         }
     }
+
+    @GetMapping("/count")
+    public ResponseEntity<Long> getVideoCount() {
+        try {
+            long count = videoService.getTotalVideoCount();
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/get-all-videos")
+    public ResponseEntity<?> getAllVideos() {
+        try {
+            Iterable<VideoMetadata> videos = videoService.getAllVideos();
+            return ResponseEntity.ok(videos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching all videos: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/file/{filename}")
+    public ResponseEntity<String> deleteVideoByFilename(@PathVariable String filename) {
+        try {
+            boolean deleted = videoService.deleteVideoByFilename(filename);
+            if (deleted) {
+                return ResponseEntity.ok("Video and metadata deleted for filename: " + filename);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No video found for filename: " + filename);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error deleting video: " + e.getMessage());
+        }
+    }
+
 }
