@@ -13,10 +13,12 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 
-export default function EditVideoModal({ open, onClose, video, onUpdated }) {
+export default function EditVideoModal({ open, onClose, video, onUpdated, videos }) {
     const originalTitle = video?.title || "";
     const originalDate = video?.assignedDate ? dayjs(video.assignedDate) : null;
-
+    const takenDates = videos
+        .filter(v => v.id !== video.id)
+        .map(v => dayjs(v.assignedDate).format("YYYY-MM-DD"));
     const [title, setTitle] = useState(originalTitle);
     const [date, setDate] = useState(originalDate);
     const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
@@ -93,8 +95,15 @@ export default function EditVideoModal({ open, onClose, video, onUpdated }) {
                             label="Assigned Date"
                             value={date}
                             onChange={(v) => setDate(v)}
+                            shouldDisableDate={(day) => {
+                                const formatted = day.format("YYYY-MM-DD");
+
+                                if (day.isBefore(dayjs(), "day")) return true; // past dates block
+                                return takenDates.includes(formatted); // prevent duplicate
+                            }}
                             slotProps={{ textField: { fullWidth: true } }}
                         />
+
 
                         <TextField
                             label="Filename"

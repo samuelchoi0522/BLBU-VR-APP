@@ -42,6 +42,7 @@ export default function Uploads() {
     const [deleteDialog, setDeleteDialog] = useState({ open: false, video: null });
     const [editDialog, setEditDialog] = useState({ open: false, video: null });
     const [uploading, setUploading] = useState(false);
+    const takenDates = videos.map(v => dayjs(v.assignedDate).format("YYYY-MM-DD"));
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -285,17 +286,27 @@ export default function Uploads() {
                                 sx={{ mb: 2 }}
                             />
 
-                            <DatePicker
-                                label="Date"
-                                value={date}
-                                onChange={(newValue) => setDate(newValue)}
-                                slotProps={{
-                                    textField: {
-                                        fullWidth: true,
-                                        sx: { mb: 2 }
-                                    }
-                                }}
-                            />
+                                <DatePicker
+                                    label="Date"
+                                    value={date}
+                                    onChange={(newValue) => setDate(newValue)}
+                                    shouldDisableDate={(day) => {
+                                        const formatted = day.format("YYYY-MM-DD");
+
+                                        // Disable past dates
+                                        if (day.isBefore(dayjs(), "day")) return true;
+
+                                        // Disable dates already assigned
+                                        return takenDates.includes(formatted);
+                                    }}
+                                    slotProps={{
+                                        textField: {
+                                            fullWidth: true,
+                                            sx: { mb: 2 },
+                                        },
+                                    }}
+                                />
+
 
                             <Button
                                 variant="contained"
@@ -396,6 +407,7 @@ export default function Uploads() {
                 <EditVideoModal
                     open={editDialog.open}
                     video={editDialog.video}
+                    videos={videos}        // ✅ pass video list
                     onClose={() => setEditDialog({ open: false, video: null })}
                     onUpdated={fetchVideos}
                 />

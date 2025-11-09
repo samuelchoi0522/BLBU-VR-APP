@@ -211,6 +211,7 @@ export default function ManageVideos() {
                 <EditVideoModal
                     open={editDialog.open}
                     video={editDialog.video}
+                    videos={videos}        // ✅ pass video list
                     onClose={() => setEditDialog({ open: false, video: null })}
                     onUpdated={fetchVideos}
                 />
