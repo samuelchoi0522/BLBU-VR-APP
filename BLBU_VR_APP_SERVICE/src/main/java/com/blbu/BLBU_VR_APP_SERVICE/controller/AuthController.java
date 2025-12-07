@@ -1,5 +1,6 @@
 package com.blbu.BLBU_VR_APP_SERVICE.controller;
 
+import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
 import com.blbu.BLBU_VR_APP_SERVICE.security.JwtUtil;
 import com.blbu.BLBU_VR_APP_SERVICE.service.UserService;
 import com.blbu.BLBU_VR_APP_SERVICE.model.User;
@@ -67,6 +68,15 @@ public class AuthController {
     public ResponseEntity<?> getTotalUsers() {
         long totalUsers = userService.getTotalUsers();
         return ResponseEntity.ok(Map.of("totalUsers", totalUsers));
+    }
+
+    @PostMapping("/register-user-from-vrapp")
+    public ResponseEntity<?> registerUserFromVrApp(@RequestBody VRAppUser user) {
+        if (userService.findByEmail(user.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email already in use"));
+        }
+        userService.registerVRAppUser(user);
+        return ResponseEntity.ok(Map.of("message", "User registered successfully from VR app"));
     }
 }
 

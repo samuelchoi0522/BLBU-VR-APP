@@ -1,10 +1,11 @@
 package com.blbu.BLBU_VR_APP_SERVICE.service;
 
+import com.blbu.BLBU_VR_APP_SERVICE.model.VideoCompletion;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.util.VideoCompressor;
 import com.google.cloud.storage.*;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,10 +21,12 @@ public class VideoService {
     private final Storage storage;
     private final VideoMetadataRepository repository;
     private final String bucketName = "vr_therapy_videos";
+    private final VideoCompletionRepository completionRepository;
 
-    public VideoService(Storage storage, VideoMetadataRepository repository) {
+    public VideoService(Storage storage, VideoMetadataRepository repository, VideoCompletionRepository completionRepository) {
         this.storage = storage;
         this.repository = repository;
+        this.completionRepository = completionRepository;
     }
 
     public String uploadAndAssignVideo(MultipartFile file, String title, boolean compress, LocalDate date) throws IOException {
@@ -164,4 +167,17 @@ public class VideoService {
         return "Updated metadata for video: " + filename;
     }
 
+    public void recordVideoCompletion(String email, LocalDate date) {
+
+        VideoMetadata video = repository.findByAssignedDate(date)
+                .orElseThrow(() -> new RuntimeException("No video assigned for date: " + date));
+
+        VideoCompletion completion = VideoCompletion.builder()
+                .email(email)
+                .video(video)
+                .completedAt(LocalDateTime.now())
+                .build();
+
+        completionRepository.save(completion);
+    }
 }

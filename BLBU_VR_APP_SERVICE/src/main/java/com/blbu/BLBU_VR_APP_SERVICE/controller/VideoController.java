@@ -129,4 +129,17 @@ public class VideoController {
         }
     }
 
+    @PostMapping("/save-video-completion")
+    public ResponseEntity<String> saveVideoCompletion(
+            @RequestParam("email") String email,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        try {
+            videoService.recordVideoCompletion(email, date);
+            return ResponseEntity.ok("Recorded video completion for " + email + " on " + date);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error recording video completion: " + e.getMessage());
+        }
+    }
+
 }

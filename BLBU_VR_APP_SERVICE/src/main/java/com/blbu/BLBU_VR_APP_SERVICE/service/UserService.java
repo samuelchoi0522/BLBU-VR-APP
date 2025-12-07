@@ -1,7 +1,9 @@
 package com.blbu.BLBU_VR_APP_SERVICE.service;
 
 import com.blbu.BLBU_VR_APP_SERVICE.model.User;
+import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.UserRepository;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VRAppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private VRAppUserRepository vrAppUserRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -31,6 +36,10 @@ public class UserService {
             return passwordEncoder.matches(rawPassword, optionalUser.get().getPassword());
         }
         return false;
+    }
+
+    public void registerVRAppUser(VRAppUser vrAppUser) {
+        vrAppUserRepository.save(vrAppUser);
     }
 
     public int getTotalUsers() {
