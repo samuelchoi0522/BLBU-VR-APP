@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     Typography,
     Table,
@@ -10,13 +10,43 @@ import {
     Paper,
     Chip,
 } from "@mui/material";
+import dayjs from "dayjs";
+import { useRouter } from "next/navigation";
 
 export default function UserData() {
-    const users = [
-        { name: "Dr. Anya Sharma", email: "anya@example.com", role: "Creator", uploads: 24, lastActive: "2025-10-21" },
-        { name: "Chef Marco Rossi", email: "marco@example.com", role: "Contributor", uploads: 10, lastActive: "2025-10-20" },
-        { name: "Isabella Rodriguez", email: "isabella@example.com", role: "Viewer", uploads: 0, lastActive: "2025-10-18" },
-    ];
+    const [users, setUsers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [completedDates, setCompletedDates] = useState([]);
+    const router = useRouter();
+
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/api/users/all`)
+            .then((res) => res.json())
+            .then((data) => {
+                const adminUsers = data.adminUsers.map((u) => ({
+                    id: u.id,
+                    name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),
+                    email: u.email,
+                    role: u.role || "ADMIN",
+                }));
+
+                const vrAppUsers = data.vrAppUsers.map((u) => ({
+                    id: u.id,
+                    name: `${u.firstName} ${u.lastName}`,
+                    email: u.email,
+                    role: "VR_USER",
+                }));
+
+                setUsers([...adminUsers, ...vrAppUsers]);
+            });
+    }, []);
+
+    const handleUserClick = (user) => {
+        const emailEncoded = encodeURIComponent(user.email);
+        router.push(`/dashboard/view/user/${emailEncoded}`);
+    };
 
     return (
         <>
@@ -24,40 +54,35 @@ export default function UserData() {
                 User Data
             </Typography>
             <Typography color="text.secondary" mb={3}>
-                View and manage user information.
+                Click a user to view their video completion calendar.
             </Typography>
 
-            <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
+            <TableContainer component={Paper} sx={{ borderRadius: 3, mb: 4 }}>
                 <Table>
                     <TableHead>
                         <TableRow>
                             <TableCell>User</TableCell>
                             <TableCell>Email</TableCell>
                             <TableCell>Role</TableCell>
-                            <TableCell>Videos Uploaded</TableCell>
-                            <TableCell>Last Active</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {users.map((user, idx) => (
-                            <TableRow key={idx}>
-                                <TableCell>{user.name}</TableCell>
+                            <TableRow
+                                key={idx}
+                                hover
+                                onClick={() => handleUserClick(user)}
+                                sx={{ cursor: "pointer" }}
+                            >
+                                <TableCell>{user.name || "N/A"}</TableCell>
                                 <TableCell>{user.email}</TableCell>
                                 <TableCell>
                                     <Chip
                                         label={user.role}
-                                        color={
-                                            user.role === "Creator"
-                                                ? "primary"
-                                                : user.role === "Contributor"
-                                                    ? "info"
-                                                    : "default"
-                                        }
+                                        color={user.role === "ADMIN" ? "primary" : "secondary"}
                                         size="small"
                                     />
                                 </TableCell>
-                                <TableCell>{user.uploads}</TableCell>
-                                <TableCell>{user.lastActive}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
