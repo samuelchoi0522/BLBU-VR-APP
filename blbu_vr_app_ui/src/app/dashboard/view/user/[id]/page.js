@@ -18,18 +18,28 @@ export default function UserCalendarPage({ params }) {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
     useEffect(() => {
-        fetch(`${API_BASE_URL}/api/users/${email}/video-completions`)
-            .then((res) => res.json())
+        const encodedEmail = encodeURIComponent(email);
+
+        fetch(`${API_BASE_URL}/api/users/video-completions?email=${encodedEmail}`, {
+            credentials: "include", // IMPORTANT: sends SESSION cookie
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.json();
+            })
             .then((data) => {
-                setCompletedDates(data.completedDates || data);
-                setUser(data.user);
+                setCompletedDates(data.completedDates || []);
+                setUser(data.user || {});
                 setLoading(false);
             })
             .catch((err) => {
-                console.error(err);
+                console.error("Failed to fetch video completions:", err);
                 setLoading(false);
             });
     }, [email]);
+
 
     const isCompleted = (date) =>
         completedDates.includes(dayjs(date).format("YYYY-MM-DD"));

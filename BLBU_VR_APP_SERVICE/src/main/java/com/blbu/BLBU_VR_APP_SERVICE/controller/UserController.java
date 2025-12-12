@@ -35,10 +35,10 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{email}/video-completions")
-    public ResponseEntity<?> getUserVideoCompletions(@PathVariable String email) {
+    @GetMapping("/video-completions")
+    public ResponseEntity<?> getUserVideoCompletions(@RequestParam String email) {
         VRAppUser user = vrAppUserService.getAllVRAppUsers().stream()
-                .filter(u -> u.getEmail().equals(email))
+                .filter(u -> u.getEmail().equalsIgnoreCase(email))
                 .findFirst()
                 .orElse(null);
 

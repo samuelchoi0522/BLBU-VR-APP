@@ -10,16 +10,14 @@ import {
     Paper,
     Chip,
 } from "@mui/material";
-import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 
 export default function UserData() {
     const [users, setUsers] = useState([]);
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [completedDates, setCompletedDates] = useState([]);
     const router = useRouter();
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+    const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
     useEffect(() => {
         fetch(`${API_BASE_URL}/api/users/all`)
@@ -44,6 +42,8 @@ export default function UserData() {
     }, []);
 
     const handleUserClick = (user) => {
+        if (user.role === "ADMIN") return; // 🔒 safety guard
+
         const emailEncoded = encodeURIComponent(user.email);
         router.push(`/dashboard/view/user/${emailEncoded}`);
     };
@@ -67,24 +67,40 @@ export default function UserData() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {users.map((user, idx) => (
-                            <TableRow
-                                key={idx}
-                                hover
-                                onClick={() => handleUserClick(user)}
-                                sx={{ cursor: "pointer" }}
-                            >
-                                <TableCell>{user.name || "N/A"}</TableCell>
-                                <TableCell>{user.email}</TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={user.role}
-                                        color={user.role === "ADMIN" ? "primary" : "secondary"}
-                                        size="small"
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                        {users.map((user, idx) => {
+                            const isAdmin = user.role === "ADMIN";
+
+                            return (
+                                <TableRow
+                                    key={idx}
+                                    hover={!isAdmin}
+                                    onClick={!isAdmin ? () => handleUserClick(user) : undefined}
+                                    sx={{
+                                        cursor: isAdmin ? "default" : "pointer",
+                                        opacity: isAdmin ? 0.6 : 1,
+                                        "&:hover": {
+                                            backgroundColor: isAdmin
+                                                ? "inherit"
+                                                : "action.hover",
+                                        },
+                                    }}
+                                >
+                                    <TableCell>{user.name || "N/A"}</TableCell>
+                                    <TableCell>{user.email}</TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={user.role}
+                                            color={
+                                                user.role === "ADMIN"
+                                                    ? "primary"
+                                                    : "secondary"
+                                            }
+                                            size="small"
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </TableContainer>
