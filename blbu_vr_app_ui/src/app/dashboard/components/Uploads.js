@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     Box,
     Typography,
@@ -19,7 +19,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions
+    DialogActions,
+    LinearProgress
 } from "@mui/material";
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -42,6 +43,9 @@ export default function Uploads() {
     const [deleteDialog, setDeleteDialog] = useState({ open: false, video: null });
     const [editDialog, setEditDialog] = useState({ open: false, video: null });
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadStatus, setUploadStatus] = useState("");
+    const xhrRef = useRef(null);
     const takenDates = videos.map(v => dayjs(v.assignedDate).format("YYYY-MM-DD"));
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
@@ -139,6 +143,17 @@ export default function Uploads() {
         setDate(null);
     };
 
+    const handleCancelUpload = () => {
+        if (xhrRef.current) {
+            xhrRef.current.abort();
+            xhrRef.current = null;
+        }
+        setUploading(false);
+        setUploadProgress(0);
+        setUploadStatus("");
+        setSnack({ open: true, msg: "Upload cancelled", severity: "info" });
+    };
+
     const handleUpload = async () => {
         if (!file || !title || !date) {
             setSnack({ open: true, msg: "Please provide file, title, and date", severity: "warning" });
@@ -146,31 +161,93 @@ export default function Uploads() {
         }
 
         setUploading(true);
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("title", title);
-        formData.append("date", dayjs(date).format('YYYY-MM-DD'));
-        formData.append("compress", false);
+        setUploadProgress(0);
+        setUploadStatus("Preparing upload...");
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/videos/assign`, {
-                method: "POST",
-                body: formData,
-                credentials: "include",
+            const token = localStorage.getItem("token");
+
+            // Step 1: Get signed URL from backend
+            setUploadStatus("Getting upload URL...");
+            const urlParams = new URLSearchParams({
+                filename: file.name,
+                contentType: file.type || "video/mp4"
             });
 
-            if (res.ok) {
-                setSnack({ open: true, msg: "Upload successful!", severity: "success" });
-                handleRemoveFile();
-                fetchVideos();
-            } else {
-                setSnack({ open: true, msg: "Upload failed", severity: "error" });
+            const urlRes = await fetch(`${API_BASE_URL}/api/videos/generate-upload-url?${urlParams}`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!urlRes.ok) {
+                throw new Error("Failed to get upload URL");
             }
+
+            const { signedUrl, filename } = await urlRes.json();
+
+            // Step 2: Upload directly to GCS with progress tracking
+            setUploadStatus("Uploading to cloud storage...");
+
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhrRef.current = xhr;
+
+                xhr.upload.addEventListener("progress", (event) => {
+                    if (event.lengthComputable) {
+                        const percentComplete = Math.round((event.loaded / event.total) * 100);
+                        setUploadProgress(percentComplete);
+                        const uploadedMB = (event.loaded / (1024 * 1024)).toFixed(1);
+                        const totalMB = (event.total / (1024 * 1024)).toFixed(1);
+                        setUploadStatus(`Uploading: ${uploadedMB} MB / ${totalMB} MB`);
+                    }
+                });
+
+                xhr.addEventListener("load", () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Upload failed with status: ${xhr.status}`));
+                    }
+                });
+
+                xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+                xhr.addEventListener("abort", () => reject(new Error("Upload cancelled")));
+
+                xhr.open("PUT", signedUrl);
+                xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+                xhr.send(file);
+            });
+
+            xhrRef.current = null;
+
+            // Step 3: Confirm upload with backend
+            setUploadStatus("Finalizing...");
+            const confirmParams = new URLSearchParams({
+                filename: filename,
+                title: title,
+                date: dayjs(date).format('YYYY-MM-DD')
+            });
+
+            const confirmRes = await fetch(`${API_BASE_URL}/api/videos/confirm-upload?${confirmParams}`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!confirmRes.ok) {
+                throw new Error("Failed to confirm upload");
+            }
+
+            setSnack({ open: true, msg: "Upload successful!", severity: "success" });
+            handleRemoveFile();
+            fetchVideos();
         } catch (err) {
-            setSnack({ open: true, msg: "Error uploading file", severity: "error" });
+            if (err.message !== "Upload cancelled") {
+                setSnack({ open: true, msg: err.message || "Error uploading file", severity: "error" });
+            }
         } finally {
             setUploading(false);
+            setUploadProgress(0);
+            setUploadStatus("");
         }
     };
 
@@ -308,20 +385,53 @@ export default function Uploads() {
                                 />
 
 
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={handleUpload}
-                                fullWidth
-                                disabled={!file || !title || !date || uploading}
-                                sx={{ py: 1.2, borderRadius: 2 }}
-                            >
-                                {uploading ? (
-                                    <CircularProgress size={24} sx={{ color: "#fff" }} />
-                                ) : (
-                                    "Upload Video"
-                                )}
-                            </Button>
+                            {uploading ? (
+                                <Box sx={{ width: '100%' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                        <Box sx={{ width: '100%', mr: 1 }}>
+                                            <LinearProgress 
+                                                variant="determinate" 
+                                                value={uploadProgress} 
+                                                sx={{ 
+                                                    height: 10, 
+                                                    borderRadius: 5,
+                                                    '& .MuiLinearProgress-bar': {
+                                                        borderRadius: 5,
+                                                    }
+                                                }}
+                                            />
+                                        </Box>
+                                        <Box sx={{ minWidth: 45 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {uploadProgress}%
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        {uploadStatus}
+                                    </Typography>
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={handleCancelUpload}
+                                        fullWidth
+                                        sx={{ py: 1, borderRadius: 2 }}
+                                    >
+                                        Cancel Upload
+                                    </Button>
+                                </Box>
+                            ) : (
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={handleUpload}
+                                    fullWidth
+                                    disabled={!file || !title || !date}
+                                    sx={{ py: 1.2, borderRadius: 2 }}
+                                >
+                                    Upload Video
+                                </Button>
+                            )}
                         </Box>
                     )}
                 </Box>

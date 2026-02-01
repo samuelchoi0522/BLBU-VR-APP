@@ -4,16 +4,18 @@ import com.blbu.BLBU_VR_APP_SERVICE.model.VideoCompletion;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
-import com.blbu.BLBU_VR_APP_SERVICE.util.VideoCompressor;
 import com.google.cloud.storage.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.nio.file.Files;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class VideoService {
@@ -29,33 +31,72 @@ public class VideoService {
         this.completionRepository = completionRepository;
     }
 
-    public String uploadAndAssignVideo(MultipartFile file, String title, boolean compress, LocalDate date) throws IOException {
-        File tempFile = convertToFile(file);
-        File uploadFile = compress ? VideoCompressor.compress(tempFile) : tempFile;
+    /**
+     * Generates a signed URL for direct upload to GCS.
+     * This allows clients to upload large files (up to 10GB) directly to GCS.
+     *
+     * @param originalFilename The original filename from the client
+     * @param contentType The content type of the file being uploaded
+     * @return A map containing the signed URL and the generated filename
+     */
+    public Map<String, String> generateSignedUploadUrl(String originalFilename, String contentType) {
+        // Generate a unique filename to avoid collisions
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+        String generatedFilename = UUID.randomUUID().toString() + extension;
 
-        BlobId blobId = BlobId.of(bucketName, uploadFile.getName());
-        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
-                .setContentType(file.getContentType())
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, generatedFilename))
+                .setContentType(contentType != null ? contentType : "video/mp4")
                 .build();
 
-        System.out.println("Uploading to GCS bucket=" + bucketName + " object=" + uploadFile.getName() + " title=" + title);
-        storage.create(blobInfo, Files.readAllBytes(uploadFile.toPath()));
+        // Generate a signed URL valid for 2 hours (enough time for large uploads)
+        URL signedUrl = storage.signUrl(
+                blobInfo,
+                2,
+                TimeUnit.HOURS,
+                Storage.SignUrlOption.httpMethod(HttpMethod.PUT),
+                Storage.SignUrlOption.withContentType()
+        );
 
-        String gcsUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, uploadFile.getName());
+        System.out.println("Generated signed upload URL for: " + generatedFilename);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("signedUrl", signedUrl.toString());
+        result.put("filename", generatedFilename);
+        result.put("gcsUrl", String.format("https://storage.googleapis.com/%s/%s", bucketName, generatedFilename));
+        return result;
+    }
+
+    /**
+     * Confirms the upload completion and saves video metadata.
+     * Called by the frontend after successfully uploading to GCS.
+     *
+     * @param filename The filename that was uploaded to GCS
+     * @param title The video title
+     * @param date The date to assign the video to
+     * @return The GCS URL of the uploaded video
+     */
+    public String confirmUploadAndAssign(String filename, String title, LocalDate date) {
+        // Verify the file exists in GCS
+        Blob blob = storage.get(BlobId.of(bucketName, filename));
+        if (blob == null) {
+            throw new RuntimeException("File not found in GCS: " + filename);
+        }
+
+        String gcsUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, filename);
 
         // Save or update metadata
         Optional<VideoMetadata> existing = repository.findByAssignedDate(date);
         VideoMetadata metadata = existing.orElse(new VideoMetadata());
-        metadata.setFilename(uploadFile.getName());
+        metadata.setFilename(filename);
         metadata.setTitle(title);
         metadata.setGcsUrl(gcsUrl);
         metadata.setAssignedDate(date);
         repository.save(metadata);
 
-        tempFile.delete();
-        if (compress) uploadFile.delete();
-
-        System.out.println("Assigned video for " + date + " -> " + gcsUrl);
+        System.out.println("Confirmed upload and assigned video for " + date + " -> " + gcsUrl);
         return gcsUrl;
     }
 
@@ -82,14 +123,6 @@ public class VideoService {
         return String.format("https://storage.googleapis.com/%s/%s", bucketName, filename);
     }
 
-
-    private File convertToFile(MultipartFile file) throws IOException {
-        File convFile = File.createTempFile("upload-", "-" + file.getOriginalFilename());
-        try (FileOutputStream fos = new FileOutputStream(convFile)) {
-            fos.write(file.getBytes());
-        }
-        return convFile;
-    }
 
     public boolean deleteVideoByDate(LocalDate date) {
         Optional<VideoMetadata> existing = repository.findByAssignedDate(date);

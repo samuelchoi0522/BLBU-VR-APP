@@ -5,9 +5,9 @@ import com.blbu.BLBU_VR_APP_SERVICE.service.VideoService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/videos")
@@ -19,18 +19,38 @@ public class VideoController {
         this.videoService = videoService;
     }
 
-    @PostMapping("/assign")
-    public ResponseEntity<String> assignVideoToDate(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(defaultValue = "false") boolean compress,
+    /**
+     * Generates a signed URL for direct upload to GCS.
+     * This allows the frontend to upload large files (up to 10GB) directly to GCS.
+     */
+    @PostMapping("/generate-upload-url")
+    public ResponseEntity<?> generateUploadUrl(
+            @RequestParam("filename") String filename,
+            @RequestParam(value = "contentType", defaultValue = "video/mp4") String contentType) {
+        try {
+            Map<String, String> result = videoService.generateSignedUploadUrl(filename, contentType);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error generating upload URL: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Confirms the upload completion and saves video metadata.
+     * Called by the frontend after successfully uploading to GCS.
+     */
+    @PostMapping("/confirm-upload")
+    public ResponseEntity<String> confirmUpload(
+            @RequestParam("filename") String filename,
             @RequestParam("title") String title,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         try {
-            String url = videoService.uploadAndAssignVideo(file, title, compress, date);
+            String url = videoService.confirmUploadAndAssign(filename, title, date);
             return ResponseEntity.ok("Assigned video for " + date + " at " + url);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error assigning video: " + e.getMessage());
+                    .body("Error confirming upload: " + e.getMessage());
         }
     }
 
