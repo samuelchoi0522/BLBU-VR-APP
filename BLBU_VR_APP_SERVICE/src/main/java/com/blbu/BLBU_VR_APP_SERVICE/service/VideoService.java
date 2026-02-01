@@ -1,13 +1,6 @@
 package com.blbu.BLBU_VR_APP_SERVICE.service;
 
-import com.blbu.BLBU_VR_APP_SERVICE.model.VideoCompletion;
-import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
-import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
-import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
-import com.google.cloud.storage.*;
-import org.springframework.stereotype.Service;
-
-import java.io.*;
+import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,6 +9,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import org.springframework.stereotype.Service;
+
+import com.blbu.BLBU_VR_APP_SERVICE.model.VideoCompletion;
+import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.HttpMethod;
+import com.google.cloud.storage.Storage;
 
 @Service
 public class VideoService {
