@@ -41,7 +41,12 @@ public class UserService {
     }
 
     public void registerVRAppUser(VRAppUser vrAppUser) {
-        vrAppUserRepository.save(vrAppUser);
+        // Save to main users table with role "user" instead of separate vr_app_users table
+        User user = new User();
+        user.setEmail(vrAppUser.getEmail());
+        user.setPassword(passwordEncoder.encode(vrAppUser.getPassword()));
+        user.setRole("user");
+        userRepository.save(user);
     }
 
     public int getTotalUsers() {

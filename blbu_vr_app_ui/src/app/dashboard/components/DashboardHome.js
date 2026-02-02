@@ -338,17 +338,17 @@ export default function DashboardHome({ setActiveTab }) {
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
-                                    Video Title
+                                <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                    <Typography sx={{ color: "#fff !important", fontWeight: 600 }}>Video Title</Typography>
                                 </TableCell>
-                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
-                                    Filename
+                                <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                    <Typography sx={{ color: "#fff !important", fontWeight: 600 }}>Filename</Typography>
                                 </TableCell>
-                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
-                                    Created
+                                <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                    <Typography sx={{ color: "#fff !important", fontWeight: 600 }}>Created</Typography>
                                 </TableCell>
-                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
-                                    Assigned Date
+                                <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                    <Typography sx={{ color: "#fff !important", fontWeight: 600 }}>Assigned Date</Typography>
                                 </TableCell>
                             </TableRow>
                         </TableHead>
@@ -357,8 +357,8 @@ export default function DashboardHome({ setActiveTab }) {
                                 <TableRow>
                                     <TableCell colSpan={4} align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
                                         <Box py={4}>
-                                            <VideoLibraryIcon sx={{ fontSize: 48, color: "rgba(255,255,255,0.2)", mb: 1 }} />
-                                            <Typography color="rgba(255,255,255,0.5)">
+                                            <VideoLibraryIcon sx={{ fontSize: 48, color: "rgba(255,255,255,0.3)", mb: 1 }} />
+                                            <Typography sx={{ color: "#fff !important" }}>
                                                 No videos uploaded yet
                                             </Typography>
                                         </Box>
@@ -374,10 +374,10 @@ export default function DashboardHome({ setActiveTab }) {
                                             },
                                         }}
                                     >
-                                        <TableCell sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.1)" }}>
-                                            <Typography fontWeight={500}>{video.title}</Typography>
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            <Typography sx={{ color: "#fff !important", fontWeight: 500 }}>{video.title}</Typography>
                                         </TableCell>
-                                        <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
                                             <Typography
                                                 variant="body2"
                                                 sx={{
@@ -387,25 +387,26 @@ export default function DashboardHome({ setActiveTab }) {
                                                     whiteSpace: "nowrap",
                                                     fontFamily: "monospace",
                                                     fontSize: "0.8rem",
+                                                    color: "#fff !important",
                                                 }}
                                             >
                                                 {video.filename}
                                             </Typography>
                                         </TableCell>
-                                        <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>
-                                            {formatDateToCST(video.createdAt)}
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            <Typography sx={{ color: "#fff !important" }}>{formatDateToCST(video.createdAt)}</Typography>
                                         </TableCell>
                                         <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
                                             <Chip
-                                                icon={<CalendarTodayIcon sx={{ fontSize: 14 }} />}
+                                                icon={<CalendarTodayIcon sx={{ fontSize: 14, color: "#fff !important" }} />}
                                                 label={formatDateOnly(video.assignedDate)}
                                                 size="small"
                                                 sx={{
                                                     bgcolor: "rgba(108, 92, 231, 0.2)",
-                                                    color: "#a29bfe",
+                                                    color: "#fff !important",
                                                     fontWeight: 500,
                                                     "& .MuiChip-icon": {
-                                                        color: "#a29bfe",
+                                                        color: "#fff !important",
                                                     },
                                                 }}
                                             />
