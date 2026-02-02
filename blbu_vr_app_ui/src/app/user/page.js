@@ -19,6 +19,9 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import DesktopWindowsIcon from "@mui/icons-material/DesktopWindows";
+import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
+import BlockIcon from "@mui/icons-material/Block";
 import dayjs from "dayjs";
 import ControlledVideoPlayer from "./components/ControlledVideoPlayer";
 
@@ -37,16 +40,66 @@ export default function UserDashboard() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(dayjs());
     const [vrSupported, setVrSupported] = useState(false);
+    const [isVrDevice, setIsVrDevice] = useState(false);
+    const [deviceType, setDeviceType] = useState("Unknown");
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-    // Check WebXR support
+    // Check WebXR support and detect device type
     useEffect(() => {
-        if (navigator.xr) {
-            navigator.xr.isSessionSupported("immersive-vr").then((supported) => {
+        const detectDevice = async () => {
+            const userAgent = navigator.userAgent.toLowerCase();
+            
+            // Check for VR headsets first
+            if (userAgent.includes("quest") || userAgent.includes("oculusbrowser")) {
+                setDeviceType("Meta Quest");
+                setIsVrDevice(true);
+            } else if (userAgent.includes("oculus")) {
+                setDeviceType("Oculus");
+                setIsVrDevice(true);
+            } else if (userAgent.includes("pico")) {
+                setDeviceType("Pico");
+                setIsVrDevice(true);
+            } else if (userAgent.includes("vive")) {
+                setDeviceType("HTC Vive");
+                setIsVrDevice(true);
+            } else if (userAgent.includes("wolvic")) {
+                setDeviceType("Wolvic VR");
+                setIsVrDevice(true);
+            } else if (userAgent.includes("firefox reality")) {
+                setDeviceType("Firefox Reality");
+                setIsVrDevice(true);
+            } else if (/iphone|ipad|ipod/.test(userAgent)) {
+                setDeviceType("iOS Mobile");
+                setIsVrDevice(false);
+            } else if (/android/.test(userAgent) && /mobile/.test(userAgent)) {
+                setDeviceType("Android Mobile");
+                setIsVrDevice(false);
+            } else if (/android/.test(userAgent)) {
+                setDeviceType("Android Tablet");
+                setIsVrDevice(false);
+            } else if (/macintosh|mac os x/.test(userAgent)) {
+                setDeviceType("Mac Desktop");
+                setIsVrDevice(false);
+            } else if (/windows/.test(userAgent)) {
+                setDeviceType("Windows Desktop");
+                setIsVrDevice(false);
+            } else if (/linux/.test(userAgent)) {
+                setDeviceType("Linux Desktop");
+                setIsVrDevice(false);
+            } else {
+                setDeviceType("Unknown Device");
+                setIsVrDevice(false);
+            }
+            
+            // Also check WebXR support
+            if (navigator.xr) {
+                const supported = await navigator.xr.isSessionSupported("immersive-vr");
                 setVrSupported(supported);
-            });
-        }
+            }
+        };
+        
+        detectDevice();
     }, []);
 
     const fetchProgress = useCallback(async (email, token) => {
@@ -120,6 +173,12 @@ export default function UserDashboard() {
                     fetchProgress(data.email, token),
                     fetchTodaysVideo(token),
                 ]);
+                
+                // If user is on VR device, automatically redirect to immersive VR player
+                if (isVrDevice) {
+                    router.push("/user/vr?autostart=true");
+                    return;
+                }
             } catch (err) {
                 console.error("Auth check failed:", err);
                 router.push("/");
@@ -129,7 +188,7 @@ export default function UserDashboard() {
         };
 
         checkAuth();
-    }, [router, API_BASE_URL, fetchProgress, fetchTodaysVideo]);
+    }, [router, API_BASE_URL, fetchProgress, fetchTodaysVideo, isVrDevice]);
 
     const handleLogout = () => {
         localStorage.clear();
@@ -241,11 +300,35 @@ export default function UserDashboard() {
                         </Typography>
                     </Box>
                 </Box>
-                <Tooltip title="Logout">
-                    <IconButton onClick={handleLogout} sx={{ color: "#fff" }}>
-                        <LogoutIcon />
-                    </IconButton>
-                </Tooltip>
+                <Box display="flex" alignItems="center" gap={2}>
+                    {/* Device Type Indicator */}
+                    <Chip
+                        icon={
+                            isVrDevice ? (
+                                <ViewInArIcon sx={{ color: "#fff !important" }} />
+                            ) : deviceType.includes("Mobile") || deviceType.includes("iOS") || deviceType.includes("Android") ? (
+                                <PhoneIphoneIcon sx={{ color: "#fff !important" }} />
+                            ) : (
+                                <DesktopWindowsIcon sx={{ color: "#fff !important" }} />
+                            )
+                        }
+                        label={deviceType}
+                        sx={{
+                            bgcolor: isVrDevice ? "rgba(0, 200, 83, 0.3)" : "rgba(244, 67, 54, 0.3)",
+                            color: "#fff",
+                            fontWeight: 600,
+                            border: isVrDevice ? "1px solid #00c853" : "1px solid #f44336",
+                            "& .MuiChip-icon": {
+                                color: "#fff",
+                            },
+                        }}
+                    />
+                    <Tooltip title="Logout">
+                        <IconButton onClick={handleLogout} sx={{ color: "#fff" }}>
+                            <LogoutIcon />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
             </Box>
 
             <Box sx={{ maxWidth: 1200, mx: "auto", px: 3, mt: 4 }}>
@@ -373,6 +456,63 @@ export default function UserDashboard() {
                                     Check back later for your daily session
                                 </Typography>
                             </Box>
+                        ) : !isVrDevice ? (
+                            /* Block non-VR devices */
+                            <Box
+                                sx={{
+                                    position: "relative",
+                                    paddingTop: "56.25%",
+                                    background: "linear-gradient(135deg, #2d1f1f 0%, #1a1a2e 100%)",
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        gap: 2,
+                                        p: 3,
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 100,
+                                            height: 100,
+                                            borderRadius: "50%",
+                                            background: "linear-gradient(135deg, #f44336 0%, #d32f2f 100%)",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            boxShadow: "0 0 40px rgba(244, 67, 54, 0.4)",
+                                        }}
+                                    >
+                                        <BlockIcon sx={{ fontSize: 50, color: "#fff" }} />
+                                    </Box>
+                                    <Typography variant="h6" fontWeight="600" color="#fff" textAlign="center">
+                                        VR Headset Required
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", textAlign: "center", maxWidth: 400 }}>
+                                        This therapy session must be viewed on a VR headset for the full immersive experience. Please access this page from your Meta Quest, Pico, or other VR device.
+                                    </Typography>
+                                    <Chip
+                                        icon={<ViewInArIcon />}
+                                        label={`Current device: ${deviceType}`}
+                                        sx={{
+                                            mt: 1,
+                                            bgcolor: "rgba(244, 67, 54, 0.2)",
+                                            color: "#f44336",
+                                            border: "1px solid #f44336",
+                                            "& .MuiChip-icon": { color: "#f44336" },
+                                        }}
+                                    />
+                                </Box>
+                            </Box>
                         ) : (
                             <Box>
                                 {!isPlaying ? (
@@ -419,23 +559,22 @@ export default function UserDashboard() {
                                                 <PlayArrowIcon sx={{ fontSize: 50, color: "#fff" }} />
                                             </Box>
                                             <Typography variant="h6" fontWeight="600" color="#fff">
-                                                Start Session
+                                                Start VR Session
                                             </Typography>
                                             <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", textAlign: "center", px: 2 }}>
                                                 You must watch the entire video without skipping
                                             </Typography>
-                                            {vrSupported && (
-                                                <Chip
-                                                    icon={<ViewInArIcon />}
-                                                    label="VR Ready"
-                                                    size="small"
-                                                    sx={{
-                                                        bgcolor: "rgba(0, 212, 255, 0.2)",
-                                                        color: "#00d4ff",
-                                                        border: "1px solid #00d4ff",
-                                                    }}
-                                                />
-                                            )}
+                                            <Chip
+                                                icon={<ViewInArIcon />}
+                                                label="VR Ready"
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: "rgba(0, 200, 83, 0.2)",
+                                                    color: "#00c853",
+                                                    border: "1px solid #00c853",
+                                                    "& .MuiChip-icon": { color: "#00c853" },
+                                                }}
+                                            />
                                         </Box>
                                     </Box>
                                 ) : (

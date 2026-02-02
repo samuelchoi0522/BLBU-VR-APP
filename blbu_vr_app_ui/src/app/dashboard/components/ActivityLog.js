@@ -206,6 +206,7 @@ export default function ActivityLog() {
     const formatTime = (timestamp) => {
         const date = new Date(timestamp);
         return date.toLocaleTimeString("en-US", {
+            timeZone: "America/Chicago",
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",

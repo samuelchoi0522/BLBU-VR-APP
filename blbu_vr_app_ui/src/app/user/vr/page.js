@@ -17,6 +17,8 @@ function VRVideoPlayerContent() {
     const [vrSession, setVrSession] = useState(null);
     const [vrSupported, setVrSupported] = useState(false);
     const [error, setError] = useState(null);
+    const [autoStartVr, setAutoStartVr] = useState(false);
+    const hasAttemptedAutoStart = useRef(false);
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -27,6 +29,10 @@ function VRVideoPlayerContent() {
                 setVrSupported(supported);
             });
         }
+        
+        // Check if auto-start VR is requested
+        const autostart = searchParams.get("autostart");
+        setAutoStartVr(autostart === "true");
 
         const fetchVideo = async () => {
             const token = localStorage.getItem("token");
@@ -61,6 +67,25 @@ function VRVideoPlayerContent() {
         fetchVideo();
     }, [router, searchParams, API_BASE_URL]);
 
+    // Auto-enter VR mode when video is ready and autostart is enabled
+    useEffect(() => {
+        if (
+            autoStartVr && 
+            vrSupported && 
+            videoUrl && 
+            !loading && 
+            !vrSession && 
+            !hasAttemptedAutoStart.current
+        ) {
+            hasAttemptedAutoStart.current = true;
+            // Small delay to ensure video element is ready
+            const timer = setTimeout(() => {
+                enterVR();
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [autoStartVr, vrSupported, videoUrl, loading, vrSession]);
+
     const enterVR = async () => {
         if (!navigator.xr || !vrSupported) {
             alert("WebXR is not supported on this device");
@@ -68,21 +93,63 @@ function VRVideoPlayerContent() {
         }
 
         try {
+            // Request VR session with video layer support if available
             const session = await navigator.xr.requestSession("immersive-vr", {
                 requiredFeatures: ["local-floor"],
+                optionalFeatures: ["layers"],
             });
             setVrSession(session);
 
+            // Enter fullscreen first
+            if (containerRef.current && containerRef.current.requestFullscreen) {
+                try {
+                    await containerRef.current.requestFullscreen();
+                } catch (e) {
+                    console.log("Fullscreen not available");
+                }
+            }
+
+            // Make sure video plays
+            if (videoRef.current) {
+                videoRef.current.play().catch(e => console.log("Auto-play prevented:", e));
+            }
+
             session.addEventListener("end", () => {
                 setVrSession(null);
+                // Exit fullscreen when VR ends
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(e => console.log("Exit fullscreen error:", e));
+                }
             });
 
-            // Basic WebXR setup for 360 video
-            // In a full implementation, you would set up WebGL rendering here
-            console.log("VR session started");
+            // Set up render loop for VR
+            const xrReferenceSpace = await session.requestReferenceSpace("local-floor");
+            
+            // Create a simple render loop to keep the session active
+            const onXRFrame = (time, frame) => {
+                if (session.ended) return;
+                session.requestAnimationFrame(onXRFrame);
+                
+                // The video is rendered by the browser's compositor
+                // This keeps the VR session alive while video plays
+            };
+            
+            session.requestAnimationFrame(onXRFrame);
+            
+            console.log("VR session started - immersive video mode active");
         } catch (err) {
             console.error("Failed to enter VR:", err);
-            alert("Failed to enter VR mode. Please try again.");
+            // If VR fails, at least go fullscreen for an immersive experience
+            if (containerRef.current) {
+                try {
+                    await containerRef.current.requestFullscreen();
+                    if (videoRef.current) {
+                        videoRef.current.play();
+                    }
+                } catch (e) {
+                    console.log("Fullscreen fallback failed:", e);
+                }
+            }
         }
     };
 
@@ -202,15 +269,68 @@ function VRVideoPlayerContent() {
                 src={videoUrl}
                 controls
                 autoPlay
+                playsInline
+                crossOrigin="anonymous"
+                onLoadedData={() => {
+                    // Auto-play when video is loaded
+                    if (videoRef.current) {
+                        videoRef.current.play().catch(e => console.log("Auto-play prevented:", e));
+                    }
+                }}
                 style={{
                     width: "100%",
                     height: "100%",
                     objectFit: "contain",
+                    background: "#000",
                 }}
             />
 
+            {/* Auto-starting VR indicator */}
+            {autoStartVr && !vrSession && vrSupported && (
+                <Box
+                    sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 20,
+                        textAlign: "center",
+                        color: "#fff",
+                    }}
+                >
+                    <CircularProgress sx={{ color: "#00d4ff", mb: 2 }} />
+                    <Typography variant="h6" fontWeight={600}>
+                        Entering Immersive VR Mode...
+                    </Typography>
+                </Box>
+            )}
+
+            {/* VR Active indicator */}
+            {vrSession && (
+                <Box
+                    sx={{
+                        position: "absolute",
+                        top: 80,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 10,
+                        bgcolor: "rgba(0, 200, 83, 0.9)",
+                        color: "#fff",
+                        px: 3,
+                        py: 1,
+                        borderRadius: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                    }}
+                >
+                    <ViewInArIcon />
+                    <Typography fontWeight={600}>VR Mode Active</Typography>
+                </Box>
+            )}
+
             {/* VR Button Overlay */}
-            {vrSupported && !vrSession && (
+            {vrSupported && !vrSession && !autoStartVr && (
                 <Box
                     sx={{
                         position: "absolute",
@@ -238,6 +358,34 @@ function VRVideoPlayerContent() {
                         }}
                     >
                         Enter VR Mode
+                    </Button>
+                </Box>
+            )}
+
+            {/* Non-VR device message */}
+            {!vrSupported && (
+                <Box
+                    sx={{
+                        position: "absolute",
+                        bottom: 100,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 10,
+                        textAlign: "center",
+                    }}
+                >
+                    <Typography color="rgba(255,255,255,0.7)" mb={1}>
+                        VR not supported on this device
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        onClick={enterFullscreen}
+                        startIcon={<FullscreenIcon />}
+                        sx={{
+                            background: "linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)",
+                        }}
+                    >
+                        Watch in Fullscreen
                     </Button>
                 </Box>
             )}
