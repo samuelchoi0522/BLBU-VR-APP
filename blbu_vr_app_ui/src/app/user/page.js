@@ -23,7 +23,6 @@ import DesktopWindowsIcon from "@mui/icons-material/DesktopWindows";
 import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import BlockIcon from "@mui/icons-material/Block";
 import dayjs from "dayjs";
-import ControlledVideoPlayer from "./components/ControlledVideoPlayer";
 
 export default function UserDashboard() {
     const router = useRouter();
@@ -37,7 +36,6 @@ export default function UserDashboard() {
     });
     const [todaysVideo, setTodaysVideo] = useState(null); // Now contains {id, title, url}
     const [videoError, setVideoError] = useState(null);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(dayjs());
     const [vrSupported, setVrSupported] = useState(false);
     const [isVrDevice, setIsVrDevice] = useState(false);
@@ -508,83 +506,70 @@ export default function UserDashboard() {
                                 </Box>
                             </Box>
                         ) : (
-                            <Box>
-                                {!isPlaying ? (
+                            /* VR Device - Show button to launch immersive VR player */
+                            <Box
+                                sx={{
+                                    position: "relative",
+                                    paddingTop: "56.25%",
+                                    background: "linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%)",
+                                    cursor: "pointer",
+                                }}
+                                onClick={() => {
+                                    // Navigate to the VR player page with video URL
+                                    router.push(`/user/vr?url=${encodeURIComponent(todaysVideo.url)}&videoId=${todaysVideo.id}&title=${encodeURIComponent(todaysVideo.title)}`);
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        gap: 2,
+                                    }}
+                                >
                                     <Box
                                         sx={{
-                                            position: "relative",
-                                            paddingTop: "56.25%",
-                                            background: "linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%)",
-                                            cursor: "pointer",
+                                            width: 100,
+                                            height: 100,
+                                            borderRadius: "50%",
+                                            background: "linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            boxShadow: "0 0 40px rgba(0, 212, 255, 0.4)",
+                                            transition: "transform 0.3s, box-shadow 0.3s",
+                                            "&:hover": {
+                                                transform: "scale(1.1)",
+                                                boxShadow: "0 0 60px rgba(0, 212, 255, 0.6)",
+                                            },
                                         }}
-                                        onClick={() => setIsPlaying(true)}
                                     >
-                                        <Box
-                                            sx={{
-                                                position: "absolute",
-                                                top: 0,
-                                                left: 0,
-                                                right: 0,
-                                                bottom: 0,
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                justifyContent: "center",
-                                                alignItems: "center",
-                                                gap: 2,
-                                            }}
-                                        >
-                                            <Box
-                                                sx={{
-                                                    width: 100,
-                                                    height: 100,
-                                                    borderRadius: "50%",
-                                                    background: "linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)",
-                                                    display: "flex",
-                                                    justifyContent: "center",
-                                                    alignItems: "center",
-                                                    boxShadow: "0 0 40px rgba(0, 212, 255, 0.4)",
-                                                    transition: "transform 0.3s, box-shadow 0.3s",
-                                                    "&:hover": {
-                                                        transform: "scale(1.1)",
-                                                        boxShadow: "0 0 60px rgba(0, 212, 255, 0.6)",
-                                                    },
-                                                }}
-                                            >
-                                                <PlayArrowIcon sx={{ fontSize: 50, color: "#fff" }} />
-                                            </Box>
-                                            <Typography variant="h6" fontWeight="600" color="#fff">
-                                                Start VR Session
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", textAlign: "center", px: 2 }}>
-                                                You must watch the entire video without skipping
-                                            </Typography>
-                                            <Chip
-                                                icon={<ViewInArIcon />}
-                                                label="VR Ready"
-                                                size="small"
-                                                sx={{
-                                                    bgcolor: "rgba(0, 200, 83, 0.2)",
-                                                    color: "#00c853",
-                                                    border: "1px solid #00c853",
-                                                    "& .MuiChip-icon": { color: "#00c853" },
-                                                }}
-                                            />
-                                        </Box>
+                                        <ViewInArIcon sx={{ fontSize: 50, color: "#fff" }} />
                                     </Box>
-                                ) : (
-                                    <Box sx={{ p: 2 }}>
-                                        <ControlledVideoPlayer
-                                            videoUrl={todaysVideo.url}
-                                            videoId={todaysVideo.id}
-                                            videoTitle={todaysVideo.title}
-                                            email={userEmail}
-                                            apiBaseUrl={API_BASE_URL}
-                                            onComplete={async () => {
-                                                await handleMarkComplete();
-                                            }}
-                                        />
-                                    </Box>
-                                )}
+                                    <Typography variant="h6" fontWeight="600" color="#fff">
+                                        Enter Immersive VR Mode
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", textAlign: "center", px: 2 }}>
+                                        Click to launch full VR experience
+                                    </Typography>
+                                    <Chip
+                                        icon={<ViewInArIcon />}
+                                        label="WebXR Ready"
+                                        size="small"
+                                        sx={{
+                                            bgcolor: "rgba(0, 200, 83, 0.2)",
+                                            color: "#00c853",
+                                            border: "1px solid #00c853",
+                                            "& .MuiChip-icon": { color: "#00c853" },
+                                        }}
+                                    />
+                                </Box>
                             </Box>
                         )}
                     </Paper>
