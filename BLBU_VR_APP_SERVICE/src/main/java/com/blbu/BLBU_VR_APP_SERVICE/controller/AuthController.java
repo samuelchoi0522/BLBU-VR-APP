@@ -47,7 +47,7 @@ public class AuthController {
         }
 
         User user = userService.findByEmail(loginRequest.getEmail()).orElse(null);
-        String role = user != null && user.getRole() != null ? user.getRole() : "user";
+        String role = user != null && user.getRole() != null ? user.getRole().toLowerCase() : "user";
         
         String token = jwtUtil.generateToken(loginRequest.getEmail());
         return ResponseEntity.ok(Map.of(
@@ -73,7 +73,7 @@ public class AuthController {
 
         String email = jwtUtil.extractEmail(token);
         User user = userService.findByEmail(email).orElse(null);
-        String role = user != null && user.getRole() != null ? user.getRole() : "user";
+        String role = user != null && user.getRole() != null ? user.getRole().toLowerCase() : "user";
         
         return ResponseEntity.ok(Map.of(
                 "valid", true,
