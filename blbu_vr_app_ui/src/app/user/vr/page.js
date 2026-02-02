@@ -17,8 +17,6 @@ function VRVideoPlayerContent() {
     const [vrSession, setVrSession] = useState(null);
     const [vrSupported, setVrSupported] = useState(false);
     const [error, setError] = useState(null);
-    const [autoStartVr, setAutoStartVr] = useState(false);
-    const hasAttemptedAutoStart = useRef(false);
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
@@ -29,10 +27,6 @@ function VRVideoPlayerContent() {
                 setVrSupported(supported);
             });
         }
-        
-        // Check if auto-start VR is requested
-        const autostart = searchParams.get("autostart");
-        setAutoStartVr(autostart === "true");
 
         const fetchVideo = async () => {
             const token = localStorage.getItem("token");
@@ -66,25 +60,6 @@ function VRVideoPlayerContent() {
 
         fetchVideo();
     }, [router, searchParams, API_BASE_URL]);
-
-    // Auto-enter VR mode when video is ready and autostart is enabled
-    useEffect(() => {
-        if (
-            autoStartVr && 
-            vrSupported && 
-            videoUrl && 
-            !loading && 
-            !vrSession && 
-            !hasAttemptedAutoStart.current
-        ) {
-            hasAttemptedAutoStart.current = true;
-            // Small delay to ensure video element is ready
-            const timer = setTimeout(() => {
-                enterVR();
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [autoStartVr, vrSupported, videoUrl, loading, vrSession]);
 
     const enterVR = async () => {
         if (!navigator.xr || !vrSupported) {

@@ -173,12 +173,6 @@ export default function UserDashboard() {
                     fetchProgress(data.email, token),
                     fetchTodaysVideo(token),
                 ]);
-                
-                // If user is on VR device, automatically redirect to immersive VR player
-                if (isVrDevice) {
-                    router.push("/user/vr?autostart=true");
-                    return;
-                }
             } catch (err) {
                 console.error("Auth check failed:", err);
                 router.push("/");
@@ -188,7 +182,7 @@ export default function UserDashboard() {
         };
 
         checkAuth();
-    }, [router, API_BASE_URL, fetchProgress, fetchTodaysVideo, isVrDevice]);
+    }, [router, API_BASE_URL, fetchProgress, fetchTodaysVideo]);
 
     const handleLogout = () => {
         localStorage.clear();

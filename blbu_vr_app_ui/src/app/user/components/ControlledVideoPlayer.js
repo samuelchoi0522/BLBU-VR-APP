@@ -34,6 +34,8 @@ export default function ControlledVideoPlayer({
     const [warnings, setWarnings] = useState([]);
     const [isComplete, setIsComplete] = useState(false);
     const [isTabVisible, setIsTabVisible] = useState(true);
+    const [videoError, setVideoError] = useState(null);
+    const [videoReady, setVideoReady] = useState(false);
     const lastReportedTime = useRef(0);
     const progressInterval = useRef(null);
 
@@ -72,12 +74,14 @@ export default function ControlledVideoPlayer({
 
     // Session start
     useEffect(() => {
+        console.log("[Video] Component mounted with URL:", videoUrl);
+        console.log("[Video] Video ID:", videoId, "Title:", videoTitle);
         sendEvent("SESSION_START", `Started watching: ${videoTitle}`);
         
         return () => {
             sendEvent("SESSION_END", "Left the page");
         };
-    }, [sendEvent, videoTitle]);
+    }, [sendEvent, videoTitle, videoUrl, videoId]);
 
     // Tab visibility detection
     useEffect(() => {
@@ -115,7 +119,54 @@ export default function ControlledVideoPlayer({
 
     // Handle video metadata loaded
     const handleLoadedMetadata = () => {
+        console.log("[Video] Metadata loaded, duration:", videoRef.current.duration);
         setDuration(videoRef.current.duration);
+    };
+
+    // Handle video can play
+    const handleCanPlay = () => {
+        console.log("[Video] Can play - video is ready");
+        setVideoReady(true);
+    };
+
+    // Handle video error
+    const handleVideoError = (e) => {
+        const video = videoRef.current;
+        let errorMessage = "Unknown video error";
+        
+        if (video?.error) {
+            switch (video.error.code) {
+                case 1:
+                    errorMessage = "Video loading aborted";
+                    break;
+                case 2:
+                    errorMessage = "Network error while loading video";
+                    break;
+                case 3:
+                    errorMessage = "Video decoding error - format may not be supported";
+                    break;
+                case 4:
+                    errorMessage = "Video not supported or source not found";
+                    break;
+                default:
+                    errorMessage = `Video error code: ${video.error.code}`;
+            }
+            console.error("[Video] Error:", video.error.code, video.error.message);
+        }
+        
+        console.error("[Video] Error event:", e);
+        setVideoError(errorMessage);
+    };
+
+    // Handle video stall/waiting
+    const handleWaiting = () => {
+        console.log("[Video] Waiting/buffering...");
+    };
+
+    // Handle video loaded data
+    const handleLoadedData = () => {
+        console.log("[Video] Data loaded - first frame available");
+        console.log("[Video] Video dimensions:", videoRef.current?.videoWidth, "x", videoRef.current?.videoHeight);
     };
 
     // Handle time update
@@ -292,16 +343,61 @@ export default function ControlledVideoPlayer({
                 </Box>
             )}
 
+            {/* Video error display */}
+            {videoError && (
+                <Box
+                    sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 25,
+                        bgcolor: "rgba(244, 67, 54, 0.95)",
+                        color: "#fff",
+                        px: 3,
+                        py: 2,
+                        borderRadius: 2,
+                        textAlign: "center",
+                    }}
+                >
+                    <WarningIcon sx={{ fontSize: 40, mb: 1 }} />
+                    <Typography variant="h6">Video Error</Typography>
+                    <Typography variant="body2">{videoError}</Typography>
+                </Box>
+            )}
+
+            {/* Loading indicator */}
+            {!videoReady && !videoError && (
+                <Box
+                    sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 25,
+                        color: "#fff",
+                        textAlign: "center",
+                    }}
+                >
+                    <Typography variant="body1">Loading video...</Typography>
+                </Box>
+            )}
+
             {/* Video element */}
             <video
                 ref={videoRef}
                 src={videoUrl}
+                crossOrigin="anonymous"
                 onLoadedMetadata={handleLoadedMetadata}
+                onLoadedData={handleLoadedData}
+                onCanPlay={handleCanPlay}
                 onTimeUpdate={handleTimeUpdate}
                 onSeeking={handleSeeking}
                 onPlay={handlePlay}
                 onPause={handlePause}
                 onEnded={handleEnded}
+                onError={handleVideoError}
+                onWaiting={handleWaiting}
                 style={{
                     width: "100%",
                     display: "block",
