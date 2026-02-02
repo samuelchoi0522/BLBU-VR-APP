@@ -50,60 +50,76 @@ export default function UserData() {
 
     return (
         <>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
+            <Typography variant="h4" fontWeight="700" color="#fff" gutterBottom>
                 User Data
             </Typography>
-            <Typography color="text.secondary" mb={3}>
+            <Typography sx={{ color: "rgba(255,255,255,0.6)" }} mb={3}>
                 Click a user to view their video completion calendar.
             </Typography>
 
-            <TableContainer component={Paper} sx={{ borderRadius: 3, mb: 4 }}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>User</TableCell>
-                            <TableCell>Email</TableCell>
-                            <TableCell>Role</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {users.map((user, idx) => {
-                            const isAdmin = user.role === "ADMIN";
+            <Paper
+                elevation={0}
+                sx={{
+                    borderRadius: 4,
+                    bgcolor: "rgba(255,255,255,0.05)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    overflow: "hidden",
+                    mb: 4,
+                }}
+            >
+                <TableContainer>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>User</TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Email</TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Role</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {users.map((user, idx) => {
+                                const isAdmin = user.role === "ADMIN";
 
-                            return (
-                                <TableRow
-                                    key={idx}
-                                    hover={!isAdmin}
-                                    onClick={!isAdmin ? () => handleUserClick(user) : undefined}
-                                    sx={{
-                                        cursor: isAdmin ? "default" : "pointer",
-                                        opacity: isAdmin ? 0.6 : 1,
-                                        "&:hover": {
-                                            backgroundColor: isAdmin
-                                                ? "inherit"
-                                                : "action.hover",
-                                        },
-                                    }}
-                                >
-                                    <TableCell>{user.name || "N/A"}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={user.role}
-                                            color={
-                                                user.role === "ADMIN"
-                                                    ? "primary"
-                                                    : "secondary"
-                                            }
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                                return (
+                                    <TableRow
+                                        key={idx}
+                                        hover={!isAdmin}
+                                        onClick={!isAdmin ? () => handleUserClick(user) : undefined}
+                                        sx={{
+                                            cursor: isAdmin ? "default" : "pointer",
+                                            opacity: isAdmin ? 0.6 : 1,
+                                            "&:hover": {
+                                                backgroundColor: isAdmin
+                                                    ? "inherit"
+                                                    : "rgba(255,255,255,0.05)",
+                                            },
+                                        }}
+                                    >
+                                        <TableCell sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.1)" }}>{user.name || "N/A"}</TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{user.email}</TableCell>
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            <Chip
+                                                label={user.role}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: user.role === "ADMIN" 
+                                                        ? "rgba(0, 212, 255, 0.2)" 
+                                                        : "rgba(108, 92, 231, 0.2)",
+                                                    color: user.role === "ADMIN" 
+                                                        ? "#00d4ff" 
+                                                        : "#a29bfe",
+                                                    fontWeight: 600,
+                                                }}
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
         </>
     );
 }

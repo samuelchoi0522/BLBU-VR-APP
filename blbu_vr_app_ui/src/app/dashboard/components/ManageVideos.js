@@ -142,68 +142,79 @@ export default function ManageVideos() {
                 </DialogActions>
             </Dialog>
 
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
+            <Typography variant="h4" fontWeight="700" color="#fff" gutterBottom>
                 Manage Videos
             </Typography>
-            <Typography color="text.secondary" mb={3}>
+            <Typography sx={{ color: "rgba(255,255,255,0.6)" }} mb={3}>
                 Edit, update, or delete your uploaded videos.
             </Typography>
 
             {loading ? (
                 <Box display="flex" justifyContent="center" alignItems="center" height={200}>
-                    <CircularProgress />
+                    <CircularProgress sx={{ color: "#00d4ff" }} />
                 </Box>
             ) : (
-                <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Title</TableCell>
-                                <TableCell>Filename</TableCell>
-                                <TableCell>Date Created</TableCell>
-                                <TableCell>Last Updated</TableCell>
-                                <TableCell>Date Assigned</TableCell>
-                                <TableCell align="center">Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {videos.length === 0 ? (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        borderRadius: 4,
+                        bgcolor: "rgba(255,255,255,0.05)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        overflow: "hidden",
+                    }}
+                >
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center">
-                                        <Typography color="text.secondary" py={3}>
-                                            No videos uploaded yet
-                                        </Typography>
-                                    </TableCell>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Title</TableCell>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Filename</TableCell>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Date Created</TableCell>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Last Updated</TableCell>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Date Assigned</TableCell>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }} align="center">Actions</TableCell>
                                 </TableRow>
-                            ) : (
-                                videos.map((video) => (
-                                    <TableRow key={video.id}>
-                                        <TableCell>{video.title || "Untitled"}</TableCell>
-                                        <TableCell>{video.filename}</TableCell>
-                                        <TableCell>{formatDateToCST(video.createdAt)}</TableCell>
-                                        <TableCell>{formatDateToCST(video.updatedAt)}</TableCell>
-                                        <TableCell>{formatDateOnly(video.assignedDate)}</TableCell>
-                                        <TableCell align="center">
-                                            <Box display="flex" justifyContent="center" gap={1}>
-                                                <IconButton size="small" onClick={() => window.open(video.gcsUrl, "_blank")}>
-                                                    <VisibilityIcon />
-                                                </IconButton>
-
-                                                <IconButton size="small" onClick={() => setEditDialog({ open: true, video })}>
-                                                    <EditIcon />
-                                                </IconButton>
-
-                                                <IconButton size="small" color="error" onClick={() => setDeleteDialog({ open: true, video })}>
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </Box>
+                            </TableHead>
+                            <TableBody>
+                                {videos.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            <Typography sx={{ color: "rgba(255,255,255,0.5)" }} py={3}>
+                                                No videos uploaded yet
+                                            </Typography>
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                                ) : (
+                                    videos.map((video) => (
+                                        <TableRow key={video.id} sx={{ "&:hover": { bgcolor: "rgba(255,255,255,0.03)" } }}>
+                                            <TableCell sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.1)" }}>{video.title || "Untitled"}</TableCell>
+                                            <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)", fontFamily: "monospace", fontSize: "0.8rem" }}>{video.filename}</TableCell>
+                                            <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateToCST(video.createdAt)}</TableCell>
+                                            <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateToCST(video.updatedAt)}</TableCell>
+                                            <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateOnly(video.assignedDate)}</TableCell>
+                                            <TableCell align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                                <Box display="flex" justifyContent="center" gap={0.5}>
+                                                    <IconButton size="small" onClick={() => window.open(video.gcsUrl, "_blank")} sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#00d4ff" } }}>
+                                                        <VisibilityIcon fontSize="small" />
+                                                    </IconButton>
+
+                                                    <IconButton size="small" onClick={() => setEditDialog({ open: true, video })} sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#ffc107" } }}>
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+
+                                                    <IconButton size="small" onClick={() => setDeleteDialog({ open: true, video })} sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#ff6b6b" } }}>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
             )}
 
             {/* Edit Modal */}

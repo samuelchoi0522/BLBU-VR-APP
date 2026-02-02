@@ -70,4 +70,13 @@ public class UserController {
         return ResponseEntity.ok(progress);
     }
 
+    /**
+     * Get only VR app users (non-admin users) for filtering
+     */
+    @GetMapping("/vr-users")
+    public ResponseEntity<List<VRAppUser>> getVRAppUsers() {
+        List<VRAppUser> vrUsers = vrAppUserService.getAllVRAppUsers();
+        return ResponseEntity.ok(vrUsers);
+    }
+
 }

@@ -9,10 +9,8 @@ import {
     CircularProgress,
     IconButton,
     Avatar,
-    Button,
     Chip,
     Tooltip,
-    LinearProgress,
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
@@ -22,6 +20,7 @@ import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import dayjs from "dayjs";
+import ControlledVideoPlayer from "./components/ControlledVideoPlayer";
 
 export default function UserDashboard() {
     const router = useRouter();
@@ -33,7 +32,7 @@ export default function UserDashboard() {
         totalCompleted: 0,
         todayCompleted: false,
     });
-    const [todaysVideo, setTodaysVideo] = useState(null);
+    const [todaysVideo, setTodaysVideo] = useState(null); // Now contains {id, title, url}
     const [videoError, setVideoError] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(dayjs());
@@ -66,12 +65,12 @@ export default function UserDashboard() {
 
     const fetchTodaysVideo = useCallback(async (token) => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/videos/today`, {
+            const res = await fetch(`${API_BASE_URL}/api/videos/today/metadata`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
-                const url = await res.text();
-                setTodaysVideo(url);
+                const data = await res.json();
+                setTodaysVideo(data); // {id, title, url, assignedDate}
             } else {
                 setVideoError("No video scheduled for today");
             }
@@ -234,10 +233,10 @@ export default function UserDashboard() {
                         {userEmail?.charAt(0).toUpperCase()}
                     </Avatar>
                     <Box>
-                        <Typography variant="h6" fontWeight="600">
+                        <Typography variant="h6" fontWeight="600" color="#fff">
                             Welcome back!
                         </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)" }}>
                             {userEmail}
                         </Typography>
                     </Box>
@@ -352,24 +351,25 @@ export default function UserDashboard() {
                             background: "rgba(255,255,255,0.05)",
                             backdropFilter: "blur(10px)",
                             border: "1px solid rgba(255,255,255,0.1)",
+                            color: "#fff",
                         }}
                     >
                         <Box sx={{ p: 3, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                            <Typography variant="h5" fontWeight="700" display="flex" alignItems="center" gap={1}>
+                            <Typography variant="h5" fontWeight="700" display="flex" alignItems="center" gap={1} color="#fff">
                                 <PlayArrowIcon sx={{ color: "#00d4ff" }} />
                                 Today&apos;s Therapy Session
                             </Typography>
-                            <Typography variant="body2" sx={{ opacity: 0.7, mt: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5 }}>
                                 {dayjs().format("MMMM D, YYYY")}
                             </Typography>
                         </Box>
 
                         {videoError ? (
                             <Box sx={{ p: 6, textAlign: "center" }}>
-                                <Typography variant="h6" sx={{ opacity: 0.7, mb: 2 }}>
+                                <Typography variant="h6" sx={{ color: "rgba(255,255,255,0.7)", mb: 2 }}>
                                     {videoError}
                                 </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.5 }}>
+                                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }}>
                                     Check back later for your daily session
                                 </Typography>
                             </Box>
@@ -418,8 +418,11 @@ export default function UserDashboard() {
                                             >
                                                 <PlayArrowIcon sx={{ fontSize: 50, color: "#fff" }} />
                                             </Box>
-                                            <Typography variant="h6" fontWeight="600">
+                                            <Typography variant="h6" fontWeight="600" color="#fff">
                                                 Start Session
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", textAlign: "center", px: 2 }}>
+                                                You must watch the entire video without skipping
                                             </Typography>
                                             {vrSupported && (
                                                 <Chip
@@ -436,65 +439,19 @@ export default function UserDashboard() {
                                         </Box>
                                     </Box>
                                 ) : (
-                                    <Box sx={{ position: "relative" }}>
-                                        <video
-                                            src={todaysVideo}
-                                            controls
-                                            autoPlay
-                                            style={{
-                                                width: "100%",
-                                                display: "block",
-                                                maxHeight: "500px",
-                                                background: "#000",
+                                    <Box sx={{ p: 2 }}>
+                                        <ControlledVideoPlayer
+                                            videoUrl={todaysVideo.url}
+                                            videoId={todaysVideo.id}
+                                            videoTitle={todaysVideo.title}
+                                            email={userEmail}
+                                            apiBaseUrl={API_BASE_URL}
+                                            onComplete={async () => {
+                                                await handleMarkComplete();
                                             }}
-                                            onEnded={handleMarkComplete}
                                         />
                                     </Box>
                                 )}
-
-                                {/* Action Buttons */}
-                                <Box sx={{ p: 3, display: "flex", gap: 2, flexWrap: "wrap" }}>
-                                    {!progress.todayCompleted && isPlaying && (
-                                        <Button
-                                            variant="contained"
-                                            onClick={handleMarkComplete}
-                                            sx={{
-                                                flex: 1,
-                                                py: 1.5,
-                                                borderRadius: 2,
-                                                background: "linear-gradient(135deg, #00c851 0%, #007e33 100%)",
-                                                fontWeight: 600,
-                                                "&:hover": {
-                                                    background: "linear-gradient(135deg, #00a844 0%, #006b2b 100%)",
-                                                },
-                                            }}
-                                            startIcon={<CheckCircleIcon />}
-                                        >
-                                            Mark as Complete
-                                        </Button>
-                                    )}
-                                    {vrSupported && (
-                                        <Button
-                                            variant="outlined"
-                                            sx={{
-                                                flex: 1,
-                                                py: 1.5,
-                                                borderRadius: 2,
-                                                borderColor: "#00d4ff",
-                                                color: "#00d4ff",
-                                                fontWeight: 600,
-                                                "&:hover": {
-                                                    borderColor: "#00d4ff",
-                                                    bgcolor: "rgba(0, 212, 255, 0.1)",
-                                                },
-                                            }}
-                                            startIcon={<ViewInArIcon />}
-                                            onClick={() => window.open(todaysVideo, "_blank")}
-                                        >
-                                            Open in VR
-                                        </Button>
-                                    )}
-                                </Box>
                             </Box>
                         )}
                     </Paper>
@@ -508,10 +465,11 @@ export default function UserDashboard() {
                             backdropFilter: "blur(10px)",
                             border: "1px solid rgba(255,255,255,0.1)",
                             overflow: "hidden",
+                            color: "#fff",
                         }}
                     >
                         <Box sx={{ p: 3, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                            <Typography variant="h5" fontWeight="700" display="flex" alignItems="center" gap={1}>
+                            <Typography variant="h5" fontWeight="700" display="flex" alignItems="center" gap={1} color="#fff">
                                 <CalendarMonthIcon sx={{ color: "#00d4ff" }} />
                                 Your Progress
                             </Typography>
@@ -526,7 +484,7 @@ export default function UserDashboard() {
                                 >
                                     ←
                                 </IconButton>
-                                <Typography variant="h6" fontWeight="600">
+                                <Typography variant="h6" fontWeight="600" color="#fff">
                                     {currentMonth.format("MMMM YYYY")}
                                 </Typography>
                                 <IconButton
@@ -552,7 +510,7 @@ export default function UserDashboard() {
                                         key={i}
                                         variant="caption"
                                         textAlign="center"
-                                        sx={{ opacity: 0.5, fontWeight: 600 }}
+                                        sx={{ color: "rgba(255,255,255,0.5)", fontWeight: 600 }}
                                     >
                                         {day}
                                     </Typography>
@@ -615,7 +573,7 @@ export default function UserDashboard() {
                                             bgcolor: "rgba(0, 200, 81, 0.3)",
                                         }}
                                     />
-                                    <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)" }}>
                                         Completed
                                     </Typography>
                                 </Box>
@@ -628,7 +586,7 @@ export default function UserDashboard() {
                                             border: "2px solid #00d4ff",
                                         }}
                                     />
-                                    <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                                    <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)" }}>
                                         Today
                                     </Typography>
                                 </Box>
@@ -648,13 +606,14 @@ export default function UserDashboard() {
                             background: "linear-gradient(135deg, rgba(255, 107, 53, 0.2) 0%, rgba(247, 147, 30, 0.2) 100%)",
                             border: "1px solid rgba(255, 107, 53, 0.3)",
                             textAlign: "center",
+                            color: "#fff",
                         }}
                     >
                         <LocalFireDepartmentIcon sx={{ fontSize: 40, color: "#ff6b35", mb: 1 }} />
                         <Typography variant="h6" fontWeight="700" sx={{ color: "#ff6b35" }}>
                             🎉 You&apos;re on fire! {progress.streak} day streak!
                         </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
+                        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)", mt: 1 }}>
                             Keep up the amazing work on your wellness journey!
                         </Typography>
                     </Paper>

@@ -91,6 +91,26 @@ public class VideoController {
         }
     }
 
+    /**
+     * Get today's video with full metadata (id, title, url)
+     */
+    @GetMapping("/today/metadata")
+    public ResponseEntity<?> getTodaysVideoMetadata() {
+        try {
+            VideoMetadata metadata = videoService.getVideoForDate(LocalDate.now());
+            String publicUrl = videoService.getVideoPublicUrl(metadata.getFilename());
+            return ResponseEntity.ok(Map.of(
+                    "id", metadata.getId(),
+                    "title", metadata.getTitle() != null ? metadata.getTitle() : "Today's Session",
+                    "url", publicUrl,
+                    "assignedDate", metadata.getAssignedDate().toString()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "No video scheduled for today"));
+        }
+    }
+
     @GetMapping("/{date}")
     public ResponseEntity<String> getVideoForDate(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -142,7 +162,7 @@ public class VideoController {
         }
     }
 
-    @DeleteMapping("/file/{filename}")
+    @DeleteMapping("/file/{filename:.+}")
     public ResponseEntity<String> deleteVideoByFilename(@PathVariable String filename) {
         try {
             boolean deleted = videoService.deleteVideoByFilename(filename);

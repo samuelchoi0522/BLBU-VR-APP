@@ -11,11 +11,15 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.blbu.BLBU_VR_APP_SERVICE.model.VideoCompletion;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoWatchEventRepository;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
@@ -29,11 +33,15 @@ public class VideoService {
     private final VideoMetadataRepository repository;
     private final String bucketName = "vr_therapy_videos";
     private final VideoCompletionRepository completionRepository;
+    private final VideoWatchEventRepository watchEventRepository;
 
-    public VideoService(Storage storage, VideoMetadataRepository repository, VideoCompletionRepository completionRepository) {
+    public VideoService(Storage storage, VideoMetadataRepository repository, 
+                       VideoCompletionRepository completionRepository,
+                       VideoWatchEventRepository watchEventRepository) {
         this.storage = storage;
         this.repository = repository;
         this.completionRepository = completionRepository;
+        this.watchEventRepository = watchEventRepository;
     }
 
     /**
@@ -56,14 +64,36 @@ public class VideoService {
                 .setContentType(contentType != null ? contentType : "video/mp4")
                 .build();
 
-        // Generate a signed URL valid for 2 hours (enough time for large uploads)
-        URL signedUrl = storage.signUrl(
-                blobInfo,
-                2,
-                TimeUnit.HOURS,
-                Storage.SignUrlOption.httpMethod(HttpMethod.PUT),
-                Storage.SignUrlOption.withContentType()
-        );
+        URL signedUrl;
+        try {
+            // Try to get service account credentials for signing
+            GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+            
+            if (credentials instanceof ServiceAccountCredentials) {
+                // Use service account credentials directly for signing
+                ServiceAccountCredentials saCredentials = (ServiceAccountCredentials) credentials;
+                signedUrl = storage.signUrl(
+                        blobInfo,
+                        2,
+                        TimeUnit.HOURS,
+                        Storage.SignUrlOption.httpMethod(HttpMethod.PUT),
+                        Storage.SignUrlOption.withContentType(),
+                        Storage.SignUrlOption.signWith(saCredentials)
+                );
+            } else {
+                // For user credentials or other credential types, use the default signer
+                // This requires the iam.serviceAccounts.signBlob permission
+                signedUrl = storage.signUrl(
+                        blobInfo,
+                        2,
+                        TimeUnit.HOURS,
+                        Storage.SignUrlOption.httpMethod(HttpMethod.PUT),
+                        Storage.SignUrlOption.withContentType()
+                );
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to get credentials for signing URL: " + e.getMessage(), e);
+        }
 
         System.out.println("Generated signed upload URL for: " + generatedFilename);
 
@@ -129,6 +159,7 @@ public class VideoService {
     }
 
 
+    @Transactional
     public boolean deleteVideoByDate(LocalDate date) {
         Optional<VideoMetadata> existing = repository.findByAssignedDate(date);
         if (existing.isEmpty()) {
@@ -137,22 +168,31 @@ public class VideoService {
         }
 
         VideoMetadata metadata = existing.get();
+        Long videoId = metadata.getId();
         String filename = metadata.getFilename();
-        System.out.println("Deleting video: " + filename + " from bucket=" + bucketName);
+        System.out.println("Deleting video: " + filename + " (id=" + videoId + ") from bucket=" + bucketName);
 
         try {
+            // Delete related records first (foreign key constraints)
+            System.out.println("Deleting related watch events...");
+            watchEventRepository.deleteAllByVideoId(videoId);
+            
+            System.out.println("Deleting related completions...");
+            completionRepository.deleteAllByVideoId(videoId);
+
             // Delete from GCS
             boolean deleted = storage.delete(BlobId.of(bucketName, filename));
             if (!deleted) {
                 System.out.println("️GCS object not found or already deleted: " + filename);
             }
 
-            // Delete from DB
+            // Delete metadata from DB
             repository.delete(metadata);
             System.out.println("Deleted metadata and video for date: " + date);
             return true;
         } catch (Exception e) {
             System.out.println("Failed to delete video: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -165,6 +205,7 @@ public class VideoService {
         return repository.findAll();
     }
 
+    @Transactional
     public boolean deleteVideoByFilename(String filename) {
         Optional<VideoMetadata> existing = repository.findByFilename(filename);
         if (existing.isEmpty()) {
@@ -173,21 +214,30 @@ public class VideoService {
         }
 
         VideoMetadata metadata = existing.get();
-        System.out.println("Deleting video: " + filename + " from bucket=" + bucketName);
+        Long videoId = metadata.getId();
+        System.out.println("Deleting video: " + filename + " (id=" + videoId + ") from bucket=" + bucketName);
 
         try {
+            // Delete related records first (foreign key constraints)
+            System.out.println("Deleting related watch events...");
+            watchEventRepository.deleteAllByVideoId(videoId);
+            
+            System.out.println("Deleting related completions...");
+            completionRepository.deleteAllByVideoId(videoId);
+
             // Delete from GCS
             boolean deleted = storage.delete(BlobId.of(bucketName, filename));
             if (!deleted) {
                 System.out.println("️GCS object not found or already deleted: " + filename);
             }
 
-            // Delete from DB
+            // Delete metadata from DB
             repository.delete(metadata);
             System.out.println("Deleted metadata and video for filename: " + filename);
             return true;
         } catch (Exception e) {
             System.out.println("Failed to delete video: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }

@@ -4,9 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Box,
-    Grid,
-    Card,
-    CardContent,
     Typography,
     Button,
     Paper,
@@ -17,7 +14,13 @@ import {
     TableBody,
     TableContainer,
     CircularProgress,
+    Chip,
 } from "@mui/material";
+import VideoLibraryIcon from "@mui/icons-material/VideoLibrary";
+import GroupIcon from "@mui/icons-material/Group";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import dayjs from "dayjs";
 
 export default function DashboardHome({ setActiveTab }) {
@@ -31,33 +34,28 @@ export default function DashboardHome({ setActiveTab }) {
     const API_BASE_URL =
         process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-    // ✅ Format date to CST timezone (Month DD, YYYY HH:MM AM/PM)
     const formatDateToCST = (dateString) => {
         if (!dateString) return "N/A";
-
         try {
             const date = new Date(dateString);
             return date.toLocaleString("en-US", {
                 timeZone: "America/Chicago",
-                year: "numeric",
-                month: "long",
+                month: "short",
                 day: "numeric",
                 hour: "numeric",
                 minute: "2-digit",
                 hour12: true
             });
         } catch (error) {
-            console.error("Error formatting date:", error);
             return dateString;
         }
     };
 
     const formatDateOnly = (dateString) => {
         if (!dateString) return "N/A";
-        return dayjs(dateString, "YYYY-MM-DD").format("MMMM D, YYYY");
+        return dayjs(dateString, "YYYY-MM-DD").format("MMM D, YYYY");
     };
 
-    // ✅ Session check + load counts
     useEffect(() => {
         const verifySessionAndLoadData = async () => {
             const token = localStorage.getItem("token");
@@ -68,9 +66,7 @@ export default function DashboardHome({ setActiveTab }) {
 
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/check-session`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    headers: { Authorization: `Bearer ${token}` },
                 });
 
                 if (!response.ok) {
@@ -79,7 +75,6 @@ export default function DashboardHome({ setActiveTab }) {
                     return;
                 }
 
-                // ✅ Call API functions
                 await Promise.all([
                     fetchVideoCount(token),
                     fetchUserCount(token),
@@ -97,13 +92,11 @@ export default function DashboardHome({ setActiveTab }) {
         verifySessionAndLoadData();
     }, [router, API_BASE_URL]);
 
-    // ✅ Load total videos count
     const fetchVideoCount = async (token) => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/videos/count`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
             if (res.ok) {
                 const count = await res.json();
                 setVideoCount(count);
@@ -113,13 +106,11 @@ export default function DashboardHome({ setActiveTab }) {
         }
     };
 
-    // ✅ Load total users count
     const fetchUserCount = async (token) => {
         try {
             const res = await fetch(`${API_BASE_URL}/auth/get-total-users`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
             if (res.ok) {
                 const count = await res.json();
                 setUserCount(count.totalUsers);
@@ -134,17 +125,13 @@ export default function DashboardHome({ setActiveTab }) {
             const res = await fetch(`${API_BASE_URL}/api/videos/get-all-videos`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
             if (res.ok) {
                 const data = await res.json();
-
-                // ✅ Sort videos by updatedAt (most recent first)
                 const sortedVideos = data.sort((a, b) => {
                     const dateA = new Date(a.updatedAt);
                     const dateB = new Date(b.updatedAt);
-                    return dateB - dateA; // Descending order
+                    return dateB - dateA;
                 });
-
                 setVideos(sortedVideos);
             }
         } catch (error) {
@@ -154,89 +141,292 @@ export default function DashboardHome({ setActiveTab }) {
 
     if (loading) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-                <CircularProgress />
+            <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <CircularProgress sx={{ color: "#00d4ff" }} />
             </Box>
         );
     }
 
-    const summaryData = [
-        { title: "Total Videos", value: videoCount },
-        { title: "Total Users", value: userCount }
+    const statsCards = [
+        {
+            title: "Total Videos",
+            value: videoCount,
+            icon: VideoLibraryIcon,
+            gradient: "linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)",
+            shadowColor: "rgba(0, 212, 255, 0.3)",
+        },
+        {
+            title: "Total Users",
+            value: userCount,
+            icon: GroupIcon,
+            gradient: "linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)",
+            shadowColor: "rgba(108, 92, 231, 0.3)",
+        },
+        {
+            title: "This Month",
+            value: videos.filter(v => {
+                const date = new Date(v.createdAt);
+                const now = new Date();
+                return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+            }).length,
+            icon: TrendingUpIcon,
+            gradient: "linear-gradient(135deg, #00c851 0%, #007e33 100%)",
+            shadowColor: "rgba(0, 200, 81, 0.3)",
+        },
     ];
 
     return (
-        <>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Dashboard
-            </Typography>
-
-            {/* Summary Cards */}
-            <Grid container spacing={2} mb={3}>
-                {summaryData.map((item, idx) => (
-                    <Grid item xs={12} sm={4} key={idx}>
-                        <Card sx={{ borderRadius: 3 }}>
-                            <CardContent>
-                                <Typography color="text.secondary">{item.title}</Typography>
-                                <Typography variant="h5" fontWeight="bold">
-                                    {item.value}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
-
-            {/* Quick Actions */}
-            <Box mb={3}>
-                <Typography variant="h6" gutterBottom>
-                    Quick Actions
+        <Box>
+            {/* Header */}
+            <Box mb={4}>
+                <Typography variant="h4" fontWeight="700" color="#fff" gutterBottom>
+                    Dashboard Overview
                 </Typography>
-                <Button variant="contained" sx={{ mr: 2 }} onClick={() => setActiveTab("upload")}>
-                    Upload New Video
-                </Button>
+                <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.6)" }}>
+                    Welcome back! Here&apos;s what&apos;s happening with your VR therapy platform.
+                </Typography>
             </Box>
 
-            {/* Recent Activity */}
-            <Box>
-                <Typography variant="h6" gutterBottom>
-                    Recent Videos
+            {/* Stats Cards */}
+            <Box
+                sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)" },
+                    gap: 3,
+                    mb: 4,
+                }}
+            >
+                {statsCards.map((card, idx) => {
+                    const Icon = card.icon;
+                    return (
+                        <Paper
+                            key={idx}
+                            elevation={0}
+                            sx={{
+                                p: 3,
+                                borderRadius: 4,
+                                background: card.gradient,
+                                boxShadow: `0 8px 32px ${card.shadowColor}`,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 2,
+                                transition: "transform 0.2s, box-shadow 0.2s",
+                                "&:hover": {
+                                    transform: "translateY(-4px)",
+                                    boxShadow: `0 12px 40px ${card.shadowColor}`,
+                                },
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 56,
+                                    height: 56,
+                                    borderRadius: 3,
+                                    bgcolor: "rgba(255,255,255,0.2)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
+                            >
+                                <Icon sx={{ fontSize: 32, color: "#fff" }} />
+                            </Box>
+                            <Box>
+                                <Typography variant="h3" fontWeight="800" color="#fff">
+                                    {card.value}
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.85)" }}>
+                                    {card.title}
+                                </Typography>
+                            </Box>
+                        </Paper>
+                    );
+                })}
+            </Box>
+
+            {/* Quick Actions */}
+            <Paper
+                elevation={0}
+                sx={{
+                    p: 3,
+                    mb: 4,
+                    borderRadius: 4,
+                    bgcolor: "rgba(255,255,255,0.05)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                }}
+            >
+                <Typography variant="h6" fontWeight="600" color="#fff" mb={2}>
+                    Quick Actions
                 </Typography>
-                <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
+                <Box display="flex" gap={2} flexWrap="wrap">
+                    <Button
+                        variant="contained"
+                        startIcon={<CloudUploadIcon />}
+                        onClick={() => setActiveTab("upload")}
+                        sx={{
+                            px: 3,
+                            py: 1.5,
+                            borderRadius: 2,
+                            background: "linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)",
+                            fontWeight: 600,
+                            textTransform: "none",
+                            boxShadow: "0 4px 15px rgba(0, 212, 255, 0.3)",
+                            "&:hover": {
+                                background: "linear-gradient(135deg, #00b4d8 0%, #0088b8 100%)",
+                            },
+                        }}
+                    >
+                        Upload New Video
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        startIcon={<GroupIcon />}
+                        onClick={() => setActiveTab("users")}
+                        sx={{
+                            px: 3,
+                            py: 1.5,
+                            borderRadius: 2,
+                            borderColor: "rgba(255,255,255,0.3)",
+                            color: "#fff",
+                            fontWeight: 600,
+                            textTransform: "none",
+                            "&:hover": {
+                                borderColor: "#00d4ff",
+                                bgcolor: "rgba(0, 212, 255, 0.1)",
+                            },
+                        }}
+                    >
+                        View Users
+                    </Button>
+                </Box>
+            </Paper>
+
+            {/* Recent Videos Table */}
+            <Paper
+                elevation={0}
+                sx={{
+                    borderRadius: 4,
+                    bgcolor: "rgba(255,255,255,0.05)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    overflow: "hidden",
+                }}
+            >
+                <Box
+                    sx={{
+                        p: 3,
+                        borderBottom: "1px solid rgba(255,255,255,0.1)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                    }}
+                >
+                    <Typography variant="h6" fontWeight="600" color="#fff">
+                        Recent Videos
+                    </Typography>
+                    <Chip
+                        label={`${videos.length} total`}
+                        size="small"
+                        sx={{
+                            bgcolor: "rgba(0, 212, 255, 0.2)",
+                            color: "#00d4ff",
+                            fontWeight: 600,
+                        }}
+                    />
+                </Box>
+                <TableContainer>
                     <Table>
                         <TableHead>
                             <TableRow>
-                                <TableCell>Video Title</TableCell>
-                                <TableCell>Video Filename</TableCell>
-                                <TableCell>Date Created</TableCell>
-                                <TableCell>Last Updated</TableCell>
-                                <TableCell>Date Assigned</TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
+                                    Video Title
+                                </TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
+                                    Filename
+                                </TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
+                                    Created
+                                </TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>
+                                    Assigned Date
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {videos.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} align="center">
-                                        <Typography color="text.secondary" py={3}>
-                                            No videos uploaded yet
-                                        </Typography>
+                                    <TableCell colSpan={4} align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                        <Box py={4}>
+                                            <VideoLibraryIcon sx={{ fontSize: 48, color: "rgba(255,255,255,0.2)", mb: 1 }} />
+                                            <Typography color="rgba(255,255,255,0.5)">
+                                                No videos uploaded yet
+                                            </Typography>
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                videos.map((video, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>{video.title}</TableCell>
-                                        <TableCell>{video.filename}</TableCell>
-                                        <TableCell>{formatDateToCST(video.createdAt)}</TableCell>
-                                        <TableCell>{formatDateToCST(video.updatedAt)}</TableCell>
-                                        <TableCell>{formatDateOnly(video.assignedDate)}</TableCell>
+                                videos.slice(0, 10).map((video, index) => (
+                                    <TableRow
+                                        key={index}
+                                        sx={{
+                                            "&:hover": {
+                                                bgcolor: "rgba(255,255,255,0.03)",
+                                            },
+                                        }}
+                                    >
+                                        <TableCell sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.1)" }}>
+                                            <Typography fontWeight={500}>{video.title}</Typography>
+                                        </TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    maxWidth: 200,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                    fontFamily: "monospace",
+                                                    fontSize: "0.8rem",
+                                                }}
+                                            >
+                                                {video.filename}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>
+                                            {formatDateToCST(video.createdAt)}
+                                        </TableCell>
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            <Chip
+                                                icon={<CalendarTodayIcon sx={{ fontSize: 14 }} />}
+                                                label={formatDateOnly(video.assignedDate)}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: "rgba(108, 92, 231, 0.2)",
+                                                    color: "#a29bfe",
+                                                    fontWeight: 500,
+                                                    "& .MuiChip-icon": {
+                                                        color: "#a29bfe",
+                                                    },
+                                                }}
+                                            />
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
                         </TableBody>
                     </Table>
                 </TableContainer>
-            </Box>
-        </>
+                {videos.length > 10 && (
+                    <Box sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
+                        <Button
+                            onClick={() => setActiveTab("manage")}
+                            sx={{ color: "#00d4ff", textTransform: "none" }}
+                        >
+                            View all {videos.length} videos →
+                        </Button>
+                    </Box>
+                )}
+            </Paper>
+        </Box>
     );
 }

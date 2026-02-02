@@ -30,6 +30,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import EditVideoModal from "./EditVideoModal";
 
 export default function Uploads() {
@@ -289,38 +290,69 @@ export default function Uploads() {
             </Dialog>
 
             <Box>
-                <Typography variant="h4" fontWeight="bold" gutterBottom>
-                    Uploads
+                <Typography variant="h4" fontWeight="700" color="#fff" gutterBottom>
+                    Upload Videos
                 </Typography>
-                <Typography color="text.secondary" mb={3}>
-                    Manage your video content
+                <Typography sx={{ color: "rgba(255,255,255,0.6)" }} mb={3}>
+                    Upload and manage your VR therapy content
                 </Typography>
 
                 {/* Upload Box */}
-                <Box
+                <Paper
+                    elevation={0}
                     sx={{
-                        border: "2px dashed #90caf9",
-                        borderRadius: 3,
+                        border: "2px dashed rgba(0, 212, 255, 0.4)",
+                        borderRadius: 4,
                         p: 4,
                         textAlign: "center",
                         mb: 4,
-                        bgcolor: "#f9fbff",
+                        bgcolor: "rgba(255,255,255,0.03)",
+                        backdropFilter: "blur(10px)",
                         position: "relative",
+                        transition: "border-color 0.2s",
+                        "&:hover": {
+                            borderColor: "rgba(0, 212, 255, 0.6)",
+                        },
                     }}
                 >
                     {!file ? (
                         <>
-                            <Typography variant="body1" fontWeight="bold" mb={1}>
+                            <Box
+                                sx={{
+                                    width: 80,
+                                    height: 80,
+                                    borderRadius: "50%",
+                                    bgcolor: "rgba(0, 212, 255, 0.1)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    mx: "auto",
+                                    mb: 2,
+                                }}
+                            >
+                                <CloudUploadIcon sx={{ fontSize: 40, color: "#00d4ff" }} />
+                            </Box>
+                            <Typography variant="h6" fontWeight="600" color="#fff" mb={1}>
                                 Drag and drop files here
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" mb={2}>
-                                Or click to select files from your computer
+                            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }} mb={3}>
+                                Or click to select files from your computer (up to 10GB)
                             </Typography>
                             <Button
                                 variant="contained"
-                                color="primary"
                                 component="label"
-                                sx={{ px: 4, py: 1.2, borderRadius: 2 }}
+                                sx={{
+                                    px: 4,
+                                    py: 1.5,
+                                    borderRadius: 2,
+                                    background: "linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)",
+                                    fontWeight: 600,
+                                    textTransform: "none",
+                                    boxShadow: "0 4px 15px rgba(0, 212, 255, 0.3)",
+                                    "&:hover": {
+                                        background: "linear-gradient(135deg, #00b4d8 0%, #0088b8 100%)",
+                                    },
+                                }}
                             >
                                 Select File
                                 <input type="file" hidden accept="video/*" onChange={handleFileChange} />
@@ -329,18 +361,18 @@ export default function Uploads() {
                     ) : (
                         <Box>
                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                <Typography variant="body1" fontWeight="bold">{file.name}</Typography>
-                                <IconButton onClick={handleRemoveFile} size="small">
+                                <Typography variant="body1" fontWeight="bold" color="#fff">{file.name}</Typography>
+                                <IconButton onClick={handleRemoveFile} size="small" sx={{ color: "rgba(255,255,255,0.6)" }}>
                                     <CloseIcon />
                                 </IconButton>
                             </Box>
 
-                            <Typography variant="body2" color="text.secondary" mb={2}>
+                            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }} mb={2}>
                                 {(file.size / (1024 * 1024)).toFixed(2)} MB
                             </Typography>
 
                             {previewURL && (
-                                <Box sx={{ mb: 2 }}>
+                                <Box sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
                                     <video
                                         src={previewURL}
                                         controls
@@ -348,7 +380,8 @@ export default function Uploads() {
                                             width: '100%',
                                             maxHeight: '300px',
                                             borderRadius: '8px',
-                                            objectFit: 'contain'
+                                            objectFit: 'contain',
+                                            backgroundColor: '#000',
                                         }}
                                     />
                                 </Box>
@@ -360,30 +393,46 @@ export default function Uploads() {
                                 label="Title"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                sx={{ mb: 2 }}
+                                sx={{
+                                    mb: 2,
+                                    "& .MuiOutlinedInput-root": {
+                                        color: "#fff",
+                                        "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                                        "&:hover fieldset": { borderColor: "rgba(255,255,255,0.4)" },
+                                        "&.Mui-focused fieldset": { borderColor: "#00d4ff" },
+                                    },
+                                    "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" },
+                                    "& .MuiInputLabel-root.Mui-focused": { color: "#00d4ff" },
+                                }}
                             />
 
-                                <DatePicker
-                                    label="Date"
-                                    value={date}
-                                    onChange={(newValue) => setDate(newValue)}
-                                    shouldDisableDate={(day) => {
-                                        const formatted = day.format("YYYY-MM-DD");
-
-                                        // Disable past dates
-                                        if (day.isBefore(dayjs(), "day")) return true;
-
-                                        // Disable dates already assigned
-                                        return takenDates.includes(formatted);
-                                    }}
-                                    slotProps={{
-                                        textField: {
-                                            fullWidth: true,
-                                            sx: { mb: 2 },
+                            <DatePicker
+                                label="Date"
+                                value={date}
+                                onChange={(newValue) => setDate(newValue)}
+                                shouldDisableDate={(day) => {
+                                    const formatted = day.format("YYYY-MM-DD");
+                                    if (day.isBefore(dayjs(), "day")) return true;
+                                    return takenDates.includes(formatted);
+                                }}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                        sx: {
+                                            mb: 2,
+                                            "& .MuiOutlinedInput-root": {
+                                                color: "#fff",
+                                                "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                                                "&:hover fieldset": { borderColor: "rgba(255,255,255,0.4)" },
+                                                "&.Mui-focused fieldset": { borderColor: "#00d4ff" },
+                                            },
+                                            "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" },
+                                            "& .MuiInputLabel-root.Mui-focused": { color: "#00d4ff" },
+                                            "& .MuiSvgIcon-root": { color: "rgba(255,255,255,0.5)" },
                                         },
-                                    }}
-                                />
-
+                                    },
+                                }}
+                            />
 
                             {uploading ? (
                                 <Box sx={{ width: '100%' }}>
@@ -395,27 +444,37 @@ export default function Uploads() {
                                                 sx={{ 
                                                     height: 10, 
                                                     borderRadius: 5,
+                                                    bgcolor: "rgba(255,255,255,0.1)",
                                                     '& .MuiLinearProgress-bar': {
                                                         borderRadius: 5,
+                                                        background: "linear-gradient(90deg, #00d4ff 0%, #00ff88 100%)",
                                                     }
                                                 }}
                                             />
                                         </Box>
                                         <Box sx={{ minWidth: 45 }}>
-                                            <Typography variant="body2" color="text.secondary">
+                                            <Typography variant="body2" sx={{ color: "#00d4ff", fontWeight: 600 }}>
                                                 {uploadProgress}%
                                             </Typography>
                                         </Box>
                                     </Box>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)", mb: 2 }}>
                                         {uploadStatus}
                                     </Typography>
                                     <Button
                                         variant="outlined"
-                                        color="error"
                                         onClick={handleCancelUpload}
                                         fullWidth
-                                        sx={{ py: 1, borderRadius: 2 }}
+                                        sx={{
+                                            py: 1.2,
+                                            borderRadius: 2,
+                                            borderColor: "#ff6b6b",
+                                            color: "#ff6b6b",
+                                            "&:hover": {
+                                                borderColor: "#ff5252",
+                                                bgcolor: "rgba(255, 107, 107, 0.1)",
+                                            },
+                                        }}
                                     >
                                         Cancel Upload
                                     </Button>
@@ -423,95 +482,122 @@ export default function Uploads() {
                             ) : (
                                 <Button
                                     variant="contained"
-                                    color="primary"
                                     onClick={handleUpload}
                                     fullWidth
                                     disabled={!file || !title || !date}
-                                    sx={{ py: 1.2, borderRadius: 2 }}
+                                    sx={{
+                                        py: 1.5,
+                                        borderRadius: 2,
+                                        background: "linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)",
+                                        fontWeight: 600,
+                                        textTransform: "none",
+                                        boxShadow: "0 4px 15px rgba(0, 212, 255, 0.3)",
+                                        "&:hover": {
+                                            background: "linear-gradient(135deg, #00b4d8 0%, #0088b8 100%)",
+                                        },
+                                        "&.Mui-disabled": {
+                                            background: "rgba(255,255,255,0.1)",
+                                            color: "rgba(255,255,255,0.3)",
+                                        },
+                                    }}
                                 >
                                     Upload Video
                                 </Button>
                             )}
                         </Box>
                     )}
-                </Box>
+                </Paper>
 
 
                 {/* Existing Videos Section */}
-                <Typography variant="h6" gutterBottom>
-                    Existing Videos ({videos.length})
-                </Typography>
-
-                {loading ? (
-                    <Box display="flex" justifyContent="center" p={4}>
-                        <CircularProgress />
+                <Paper
+                    elevation={0}
+                    sx={{
+                        borderRadius: 4,
+                        bgcolor: "rgba(255,255,255,0.05)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        overflow: "hidden",
+                    }}
+                >
+                    <Box sx={{ p: 3, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                        <Typography variant="h6" fontWeight="600" color="#fff">
+                            Existing Videos ({videos.length})
+                        </Typography>
                     </Box>
-                ) : (
-                    <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Title</TableCell>
-                                    <TableCell>Filename</TableCell>
-                                    <TableCell>Date Created</TableCell>
-                                    <TableCell>Last Updated</TableCell>
-                                    <TableCell>Date Assigned</TableCell>
-                                    <TableCell align="center">Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {videos.length === 0 ? (
+
+                    {loading ? (
+                        <Box display="flex" justifyContent="center" p={4}>
+                            <CircularProgress sx={{ color: "#00d4ff" }} />
+                        </Box>
+                    ) : (
+                        <TableContainer>
+                            <Table>
+                                <TableHead>
                                     <TableRow>
-                                        <TableCell colSpan={6} align="center">
-                                            <Typography color="text.secondary" py={3}>
-                                                No videos uploaded yet
-                                            </Typography>
-                                        </TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Title</TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Filename</TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Created</TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Updated</TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Assigned</TableCell>
+                                        <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }} align="center">Actions</TableCell>
                                     </TableRow>
-                                ) : (
-                                    videos.map((video) => (
-                                        <TableRow key={video.id}>
-                                            <TableCell>{video.title || "Untitled"}</TableCell>
-                                            <TableCell>{video.filename}</TableCell>
-                                            <TableCell>{formatDateToCST(video.createdAt)}</TableCell>
-                                            <TableCell>{formatDateToCST(video.updatedAt)}</TableCell>
-                                            <TableCell>{formatDateOnly(video.assignedDate)}</TableCell>
-                                            <TableCell align="center">
-                                                <Box display="flex" justifyContent="center" gap={1}>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => window.open(video.gcsUrl, '_blank')}
-                                                        title="View video"
-                                                    >
-                                                        <VisibilityIcon />
-                                                    </IconButton>
-
-                                                    <IconButton
-                                                        size="small"
-                                                        title="Edit video"
-                                                        onClick={() => setEditDialog({ open: true, video })}
-                                                    >
-                                                        <EditIcon />
-                                                    </IconButton>
-
-
-                                                    <IconButton
-                                                        size="small"
-                                                        color="error"
-                                                        title="Delete video"
-                                                        onClick={() => setDeleteDialog({ open: true, video })}
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </Box>
+                                </TableHead>
+                                <TableBody>
+                                    {videos.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                                <Typography sx={{ color: "rgba(255,255,255,0.5)" }} py={3}>
+                                                    No videos uploaded yet
+                                                </Typography>
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
+                                    ) : (
+                                        videos.map((video) => (
+                                            <TableRow key={video.id} sx={{ "&:hover": { bgcolor: "rgba(255,255,255,0.03)" } }}>
+                                                <TableCell sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.1)" }}>{video.title || "Untitled"}</TableCell>
+                                                <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)", fontFamily: "monospace", fontSize: "0.8rem" }}>{video.filename}</TableCell>
+                                                <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateToCST(video.createdAt)}</TableCell>
+                                                <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateToCST(video.updatedAt)}</TableCell>
+                                                <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateOnly(video.assignedDate)}</TableCell>
+                                                <TableCell align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                                    <Box display="flex" justifyContent="center" gap={0.5}>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => window.open(video.gcsUrl, '_blank')}
+                                                            title="View video"
+                                                            sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#00d4ff" } }}
+                                                        >
+                                                            <VisibilityIcon fontSize="small" />
+                                                        </IconButton>
+
+                                                        <IconButton
+                                                            size="small"
+                                                            title="Edit video"
+                                                            onClick={() => setEditDialog({ open: true, video })}
+                                                            sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#ffc107" } }}
+                                                        >
+                                                            <EditIcon fontSize="small" />
+                                                        </IconButton>
+
+                                                        <IconButton
+                                                            size="small"
+                                                            title="Delete video"
+                                                            onClick={() => setDeleteDialog({ open: true, video })}
+                                                            sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#ff6b6b" } }}
+                                                        >
+                                                            <DeleteIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </Paper>
             </Box>
             {editDialog.open && (
                 <EditVideoModal

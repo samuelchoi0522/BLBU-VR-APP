@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
     Box,
@@ -24,13 +24,16 @@ export default function LoginPage() {
     const API_BASE_URL =
         process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-    const redirectBasedOnRole = (role) => {
+    const redirectBasedOnRole = useCallback((role) => {
+        console.log("Redirecting based on role:", role);
         if (role === "admin") {
+            console.log("Redirecting to /dashboard");
             router.push("/dashboard");
         } else {
+            console.log("Redirecting to /user");
             router.push("/user");
         }
-    };
+    }, [router]);
 
     useEffect(() => {
         const checkSession = async () => {
@@ -49,6 +52,7 @@ export default function LoginPage() {
 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log("Check session response:", data);
                     localStorage.setItem("userRole", data.role || "user");
                     localStorage.setItem("userEmail", data.email);
                     redirectBasedOnRole(data.role);
@@ -65,7 +69,7 @@ export default function LoginPage() {
         };
 
         checkSession();
-    }, [router, API_BASE_URL]);
+    }, [API_BASE_URL, redirectBasedOnRole]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -85,6 +89,8 @@ export default function LoginPage() {
             const text = await response.text();
             const data = text ? JSON.parse(text) : {};
 
+            console.log("Login response:", data);
+
             if (!response.ok) {
                 throw new Error(data.error || "Login failed");
             }
@@ -96,7 +102,14 @@ export default function LoginPage() {
             }
 
             setSuccess(data.message || "Login successful!");
-            setTimeout(() => redirectBasedOnRole(data.role), 800);
+            
+            // Direct redirect without setTimeout for more reliability
+            const role = data.role || "user";
+            if (role === "admin") {
+                router.push("/dashboard");
+            } else {
+                router.push("/user");
+            }
         } catch (err) {
             setError(err.message);
         } finally {
