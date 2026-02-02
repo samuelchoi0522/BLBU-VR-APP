@@ -1,13 +1,19 @@
 package com.blbu.BLBU_VR_APP_SERVICE.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.blbu.BLBU_VR_APP_SERVICE.model.User;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
 import com.blbu.BLBU_VR_APP_SERVICE.service.UserService;
 import com.blbu.BLBU_VR_APP_SERVICE.service.VrAppUserService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -53,6 +59,15 @@ public class UserController {
         response.put("completedDates", completedDates);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get user progress including streak, completed dates, and today's status
+     */
+    @GetMapping("/progress")
+    public ResponseEntity<?> getUserProgress(@RequestParam String email) {
+        Map<String, Object> progress = vrAppUserService.getUserProgress(email);
+        return ResponseEntity.ok(progress);
     }
 
 }

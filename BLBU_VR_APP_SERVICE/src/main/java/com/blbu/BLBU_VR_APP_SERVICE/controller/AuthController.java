@@ -1,15 +1,22 @@
 package com.blbu.BLBU_VR_APP_SERVICE.controller;
 
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.blbu.BLBU_VR_APP_SERVICE.model.User;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
 import com.blbu.BLBU_VR_APP_SERVICE.security.JwtUtil;
 import com.blbu.BLBU_VR_APP_SERVICE.service.UserService;
-import com.blbu.BLBU_VR_APP_SERVICE.model.User;
-import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import lombok.Data;
 
 @RestController
 @RequestMapping("/auth")
@@ -39,8 +46,16 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
 
+        User user = userService.findByEmail(loginRequest.getEmail()).orElse(null);
+        String role = user != null && user.getRole() != null ? user.getRole() : "user";
+        
         String token = jwtUtil.generateToken(loginRequest.getEmail());
-        return ResponseEntity.ok(Map.of("message", "Login successful", "token", token));
+        return ResponseEntity.ok(Map.of(
+                "message", "Login successful", 
+                "token", token,
+                "role", role,
+                "email", loginRequest.getEmail()
+        ));
     }
 
     // Check session validity
@@ -57,9 +72,13 @@ public class AuthController {
         }
 
         String email = jwtUtil.extractEmail(token);
+        User user = userService.findByEmail(email).orElse(null);
+        String role = user != null && user.getRole() != null ? user.getRole() : "user";
+        
         return ResponseEntity.ok(Map.of(
                 "valid", true,
                 "email", email,
+                "role", role,
                 "message", "Session is active"
         ));
     }

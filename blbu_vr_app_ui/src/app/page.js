@@ -24,6 +24,14 @@ export default function LoginPage() {
     const API_BASE_URL =
         process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
+    const redirectBasedOnRole = (role) => {
+        if (role === "admin") {
+            router.push("/dashboard");
+        } else {
+            router.push("/user");
+        }
+    };
+
     useEffect(() => {
         const checkSession = async () => {
             const token = localStorage.getItem("token");
@@ -40,9 +48,14 @@ export default function LoginPage() {
                 });
 
                 if (response.ok) {
-                    router.push("/dashboard");
+                    const data = await response.json();
+                    localStorage.setItem("userRole", data.role || "user");
+                    localStorage.setItem("userEmail", data.email);
+                    redirectBasedOnRole(data.role);
                 } else {
                     localStorage.removeItem("token");
+                    localStorage.removeItem("userRole");
+                    localStorage.removeItem("userEmail");
                     setCheckingSession(false);
                 }
             } catch (err) {
@@ -78,10 +91,12 @@ export default function LoginPage() {
 
             if (data.token) {
                 localStorage.setItem("token", data.token);
+                localStorage.setItem("userRole", data.role || "user");
+                localStorage.setItem("userEmail", data.email);
             }
 
             setSuccess(data.message || "Login successful!");
-            setTimeout(() => router.push("/dashboard"), 800);
+            setTimeout(() => redirectBasedOnRole(data.role), 800);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -89,7 +104,6 @@ export default function LoginPage() {
         }
     };
 
-    // ✅ Show spinner while checking session
     if (checkingSession) {
         return (
             <Box
@@ -97,8 +111,11 @@ export default function LoginPage() {
                 justifyContent="center"
                 alignItems="center"
                 height="100vh"
+                sx={{
+                    background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+                }}
             >
-                <CircularProgress />
+                <CircularProgress sx={{ color: "#00d4ff" }} />
             </Box>
         );
     }
@@ -109,15 +126,69 @@ export default function LoginPage() {
             justifyContent="center"
             alignItems="center"
             height="100vh"
-            bgcolor="#f5f6fa"
+            sx={{
+                background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+                position: "relative",
+                overflow: "hidden",
+                "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: "-50%",
+                    left: "-50%",
+                    width: "200%",
+                    height: "200%",
+                    background: "radial-gradient(circle, rgba(0,212,255,0.1) 0%, transparent 50%)",
+                    animation: "pulse 8s ease-in-out infinite",
+                },
+                "@keyframes pulse": {
+                    "0%, 100%": { transform: "scale(1)" },
+                    "50%": { transform: "scale(1.1)" },
+                },
+            }}
         >
-            <Paper elevation={3} sx={{ p: 4, width: "100%", maxWidth: 400, borderRadius: 3 }}>
-                <Typography variant="h5" fontWeight="bold" textAlign="center" mb={3}>
-                    Login
-                </Typography>
+            <Paper
+                elevation={24}
+                sx={{
+                    p: 5,
+                    width: "100%",
+                    maxWidth: 420,
+                    borderRadius: 4,
+                    background: "rgba(255, 255, 255, 0.95)",
+                    backdropFilter: "blur(20px)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    position: "relative",
+                    zIndex: 1,
+                }}
+            >
+                <Box textAlign="center" mb={4}>
+                    <Typography
+                        variant="h4"
+                        fontWeight="800"
+                        sx={{
+                            background: "linear-gradient(135deg, #0f3460 0%, #00d4ff 100%)",
+                            backgroundClip: "text",
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                            mb: 1,
+                        }}
+                    >
+                        BLBU VR Therapy
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Sign in to continue your wellness journey
+                    </Typography>
+                </Box>
 
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-                {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+                {success && (
+                    <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                        {success}
+                    </Alert>
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <TextField
@@ -128,6 +199,17 @@ export default function LoginPage() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        sx={{
+                            "& .MuiOutlinedInput-root": {
+                                borderRadius: 2,
+                                "&:hover fieldset": {
+                                    borderColor: "#00d4ff",
+                                },
+                                "&.Mui-focused fieldset": {
+                                    borderColor: "#0f3460",
+                                },
+                            },
+                        }}
                     />
 
                     <TextField
@@ -138,17 +220,39 @@ export default function LoginPage() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        sx={{
+                            "& .MuiOutlinedInput-root": {
+                                borderRadius: 2,
+                                "&:hover fieldset": {
+                                    borderColor: "#00d4ff",
+                                },
+                                "&.Mui-focused fieldset": {
+                                    borderColor: "#0f3460",
+                                },
+                            },
+                        }}
                     />
 
                     <Button
                         type="submit"
                         variant="contained"
-                        color="primary"
                         fullWidth
-                        sx={{ mt: 3 }}
+                        sx={{
+                            mt: 3,
+                            py: 1.5,
+                            borderRadius: 2,
+                            fontSize: "1rem",
+                            fontWeight: 600,
+                            background: "linear-gradient(135deg, #0f3460 0%, #00d4ff 100%)",
+                            boxShadow: "0 4px 15px rgba(0, 212, 255, 0.3)",
+                            "&:hover": {
+                                background: "linear-gradient(135deg, #16213e 0%, #00b4d8 100%)",
+                                boxShadow: "0 6px 20px rgba(0, 212, 255, 0.4)",
+                            },
+                        }}
                         disabled={loading}
                     >
-                        {loading ? "Logging in..." : "Login"}
+                        {loading ? "Signing in..." : "Sign In"}
                     </Button>
                 </form>
             </Paper>
