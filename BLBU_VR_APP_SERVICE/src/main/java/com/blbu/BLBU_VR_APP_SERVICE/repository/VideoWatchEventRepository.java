@@ -34,5 +34,10 @@ public interface VideoWatchEventRepository extends JpaRepository<VideoWatchEvent
     @Modifying
     @Query("DELETE FROM VideoWatchEvent e WHERE e.video.id = :videoId")
     void deleteAllByVideoId(Long videoId);
+
+    // Delete all watch events for a specific user (by email)
+    @Modifying
+    @Query("DELETE FROM VideoWatchEvent e WHERE e.email = :email")
+    void deleteAllByEmail(String email);
 }
 

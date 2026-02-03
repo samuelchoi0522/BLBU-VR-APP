@@ -64,7 +64,9 @@ public class VideoWatchEvent {
         PROGRESS_UPDATE,    // Periodic progress update
         VIDEO_COMPLETE,     // Video fully watched
         SESSION_END,        // User closed/left the page
-        VIOLATION           // Any rule violation
+        VIOLATION,          // Any rule violation
+        ENTER_VR_MODE,      // User entered WebXR immersive mode
+        EXIT_VR_MODE        // User exited WebXR immersive mode
     }
 }
 

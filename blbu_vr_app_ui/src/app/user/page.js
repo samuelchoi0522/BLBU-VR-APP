@@ -505,6 +505,52 @@ export default function UserDashboard() {
                                     />
                                 </Box>
                             </Box>
+                        ) : progress.todayCompleted ? (
+                            /* Video already completed - show message */
+                            <Box
+                                sx={{
+                                    position: "relative",
+                                    paddingTop: "56.25%",
+                                    background: "linear-gradient(135deg, #2d1f1f 0%, #1a1a2e 100%)",
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        gap: 2,
+                                        p: 3,
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 100,
+                                            height: 100,
+                                            borderRadius: "50%",
+                                            background: "linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            boxShadow: "0 0 40px rgba(76, 175, 80, 0.4)",
+                                        }}
+                                    >
+                                        <CheckCircleIcon sx={{ fontSize: 50, color: "#fff" }} />
+                                    </Box>
+                                    <Typography variant="h6" fontWeight="600" color="#fff" textAlign="center">
+                                        Session Already Completed
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", textAlign: "center", maxWidth: 400 }}>
+                                        You have already completed today&apos;s therapy session. Please check back tomorrow for your next session.
+                                    </Typography>
+                                </Box>
+                            </Box>
                         ) : (
                             /* VR Device - Show button to launch immersive VR player */
                             <Box

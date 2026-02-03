@@ -5,9 +5,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 public interface VideoCompletionRepository extends JpaRepository<VideoCompletion, Long> {
 
@@ -24,4 +25,8 @@ public interface VideoCompletionRepository extends JpaRepository<VideoCompletion
     @Modifying
     @Query("DELETE FROM VideoCompletion vc WHERE vc.video.id = :videoId")
     void deleteAllByVideoId(Long videoId);
+
+    // Get all completions for a specific date
+    @Query("SELECT vc FROM VideoCompletion vc WHERE vc.completedAt >= :startDate AND vc.completedAt < :endDate")
+    List<VideoCompletion> findAllByDateRange(LocalDateTime startDate, LocalDateTime endDate);
 }

@@ -178,6 +178,19 @@ public class VideoController {
         }
     }
 
+    @GetMapping("/check-completion")
+    public ResponseEntity<?> checkVideoCompletion(
+            @RequestParam("email") String email,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        try {
+            boolean completed = videoService.isVideoCompleted(email, date);
+            return ResponseEntity.ok(Map.of("completed", completed));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error checking video completion: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/save-video-completion")
     public ResponseEntity<String> saveVideoCompletion(
             @RequestParam("email") String email,

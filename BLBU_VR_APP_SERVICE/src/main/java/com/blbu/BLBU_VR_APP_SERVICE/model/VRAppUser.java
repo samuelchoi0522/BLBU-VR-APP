@@ -25,6 +25,10 @@ public class VRAppUser {
     @Column(nullable = false)
     private String lastName;
 
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    @Builder.Default
+    private Boolean active = true; // Default to true for new users
+
     // Transient field - not persisted to vr_app_users table, used only for registration
     @Transient
     private String password;

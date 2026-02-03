@@ -7,14 +7,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.blbu.BLBU_VR_APP_SERVICE.model.User;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VideoCompletion;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.UserRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VRAppUserRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoWatchEventRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class VrAppUserService {
@@ -25,8 +30,18 @@ public class VrAppUserService {
     @Autowired
     VideoCompletionRepository videoCompletionRepository;
 
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    VideoWatchEventRepository videoWatchEventRepository;
+
     public List<VRAppUser> getAllVRAppUsers() {
         return vrAppUserRepository.findAll();
+    }
+
+    public List<VRAppUser> getActiveVRAppUsers() {
+        return vrAppUserRepository.findByActiveTrue();
     }
 
     public List<String> getCompletedDatesForUser(String email) {
@@ -96,5 +111,122 @@ public class VrAppUserService {
         progress.put("todayCompleted", todayCompleted);
 
         return progress;
+    }
+
+    public VRAppUser updateUserActiveStatus(String email, boolean active) {
+        // First try to find in vr_app_users table
+        VRAppUser vrUser = vrAppUserRepository.findByEmail(email).orElse(null);
+        
+        if (vrUser == null) {
+            // If not found, check if user exists in users table (might be an old user)
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + email));
+            
+            // Only create VRAppUser if the user is not an admin
+            if (user.getRole() != null && !user.getRole().equalsIgnoreCase("admin")) {
+                // Create new VRAppUser record
+                vrUser = VRAppUser.builder()
+                        .email(email)
+                        .firstName("User") // Default values - admin should update these
+                        .lastName("")
+                        .active(active)
+                        .build();
+                vrUser = vrAppUserRepository.save(vrUser);
+            } else {
+                throw new RuntimeException("Cannot set active status for admin user: " + email);
+            }
+        } else {
+            // Update existing VRAppUser
+            vrUser.setActive(active);
+            vrUser = vrAppUserRepository.save(vrUser);
+        }
+        
+        return vrUser;
+    }
+
+    /**
+     * Get today's completion status for active users only
+     * Returns users who completed and users who didn't complete today's video
+     */
+    public Map<String, Object> getTodaysCompletionStatus() {
+        LocalDate today = LocalDate.now();
+        List<VRAppUser> allUsers = getActiveVRAppUsers(); // Only get active users
+        
+        List<Map<String, Object>> completedUsers = new ArrayList<>();
+        List<Map<String, Object>> notCompletedUsers = new ArrayList<>();
+        
+        for (VRAppUser user : allUsers) {
+            boolean completed = existsByEmailAndDate(user.getEmail(), today);
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("email", user.getEmail());
+            userInfo.put("firstName", user.getFirstName());
+            userInfo.put("lastName", user.getLastName());
+            userInfo.put("displayName", user.getFirstName() + " " + user.getLastName());
+            
+            if (completed) {
+                completedUsers.add(userInfo);
+            } else {
+                notCompletedUsers.add(userInfo);
+            }
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("date", today.toString());
+        result.put("completedUsers", completedUsers);
+        result.put("notCompletedUsers", notCompletedUsers);
+        result.put("totalUsers", allUsers.size());
+        result.put("completedCount", completedUsers.size());
+        result.put("notCompletedCount", notCompletedUsers.size());
+        
+        return result;
+    }
+
+    private boolean existsByEmailAndDate(String email, LocalDate date) {
+        List<VideoCompletion> completions = videoCompletionRepository.findAllByEmail(email);
+        return completions.stream()
+                .anyMatch(c -> c.getCompletedAt().toLocalDate().equals(date));
+    }
+
+    /**
+     * Delete a user and all their related data (VideoCompletion, VideoWatchEvent, VRAppUser, User)
+     */
+    @Transactional
+    public boolean deleteUser(String email) {
+        // Check if user exists
+        Optional<VRAppUser> vrUserOpt = vrAppUserRepository.findByEmail(email);
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        
+        if (vrUserOpt.isEmpty() && userOpt.isEmpty()) {
+            return false;
+        }
+
+        // Don't allow deleting admin users
+        if (userOpt.isPresent() && userOpt.get().getRole() != null && 
+            userOpt.get().getRole().equalsIgnoreCase("admin")) {
+            throw new IllegalArgumentException("Cannot delete admin users");
+        }
+
+        // Delete related data first (foreign key constraints)
+        System.out.println("Deleting watch events for user: " + email);
+        videoWatchEventRepository.deleteAllByEmail(email);
+        
+        System.out.println("Deleting video completions for user: " + email);
+        List<VideoCompletion> completions = videoCompletionRepository.findAllByEmail(email);
+        videoCompletionRepository.deleteAll(completions);
+
+        // Delete VRAppUser if exists
+        if (vrUserOpt.isPresent()) {
+            System.out.println("Deleting VRAppUser: " + email);
+            vrAppUserRepository.delete(vrUserOpt.get());
+        }
+
+        // Delete User if exists
+        if (userOpt.isPresent()) {
+            System.out.println("Deleting User: " + email);
+            userRepository.delete(userOpt.get());
+        }
+
+        System.out.println("Successfully deleted user and all related data: " + email);
+        return true;
     }
 }

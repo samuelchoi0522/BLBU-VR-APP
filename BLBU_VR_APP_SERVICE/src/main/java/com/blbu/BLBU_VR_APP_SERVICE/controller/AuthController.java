@@ -34,8 +34,12 @@ public class AuthController {
         if (userService.findByEmail(user.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Email already in use"));
         }
-        userService.registerUser(user);
-        return ResponseEntity.ok(Map.of("message", "User registered successfully"));
+        try {
+            userService.registerUser(user);
+            return ResponseEntity.ok(Map.of("message", "User registered successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     // Login existing user
@@ -94,8 +98,12 @@ public class AuthController {
         if (userService.findByEmail(user.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Email already in use"));
         }
-        userService.registerVRAppUser(user);
-        return ResponseEntity.ok(Map.of("message", "User registered successfully from VR app"));
+        try {
+            userService.registerVRAppUser(user);
+            return ResponseEntity.ok(Map.of("message", "User registered successfully from VR app"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }
 

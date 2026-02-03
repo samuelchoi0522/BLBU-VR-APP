@@ -20,7 +20,11 @@ import {
     CircularProgress,
 } from "@mui/material";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useRouter } from "next/navigation";
+import { Switch, IconButton, Tooltip } from "@mui/material";
 
 export default function UserData() {
     const [users, setUsers] = useState([]);
@@ -29,6 +33,10 @@ export default function UserData() {
     const [addUserLoading, setAddUserLoading] = useState(false);
     const [addUserError, setAddUserError] = useState("");
     const [addUserSuccess, setAddUserSuccess] = useState("");
+    const [updatingActive, setUpdatingActive] = useState(new Set());
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
     const router = useRouter();
 
     const API_BASE_URL =
@@ -50,6 +58,7 @@ export default function UserData() {
                     name: `${u.firstName} ${u.lastName}`,
                     email: u.email,
                     role: "user",
+                    active: u.active !== undefined ? u.active : true, // Default to true if not set
                 }));
 
                 setUsers([...adminUsers, ...vrAppUsers]);
@@ -63,6 +72,21 @@ export default function UserData() {
     const handleAddUser = async () => {
         setAddUserError("");
         setAddUserSuccess("");
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newUser.email)) {
+            setAddUserError("Please enter a valid email address");
+            return;
+        }
+
+        // Check if email already exists in the current user list
+        const emailExists = users.some(u => u.email.toLowerCase() === newUser.email.toLowerCase());
+        if (emailExists) {
+            setAddUserError("This email is already registered. Please use a different email.");
+            return;
+        }
+
         setAddUserLoading(true);
 
         try {
@@ -75,6 +99,12 @@ export default function UserData() {
             const data = await response.json();
 
             if (!response.ok) {
+                // Check for duplicate email error specifically
+                if (data.error && (data.error.toLowerCase().includes("already in use") || 
+                    data.error.toLowerCase().includes("duplicate") ||
+                    data.error.toLowerCase().includes("unique"))) {
+                    throw new Error("This email is already registered. Please use a different email.");
+                }
                 throw new Error(data.error || "Failed to create user");
             }
 
@@ -101,11 +131,96 @@ export default function UserData() {
         setNewUser({ firstName: "", lastName: "", email: "", password: "" });
     };
 
+    const handleDeleteClick = (user, event) => {
+        event.stopPropagation(); // Prevent row click
+        setUserToDelete(user);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!userToDelete) return;
+
+        setDeleting(true);
+        try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(
+                `${API_BASE_URL}/api/users/delete?email=${encodeURIComponent(userToDelete.email)}`,
+                {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to delete user");
+            }
+
+            // Refresh the user list
+            fetchUsers();
+            setDeleteDialogOpen(false);
+            setUserToDelete(null);
+        } catch (err) {
+            console.error("Failed to delete user:", err);
+            alert(`Failed to delete user: ${err.message}`);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+    };
+
     const handleUserClick = (user) => {
         if (user.role === "admin") return; // 🔒 safety guard
 
         const emailEncoded = encodeURIComponent(user.email);
         router.push(`/dashboard/view/user/${emailEncoded}`);
+    };
+
+    const handleToggleActive = async (user, event) => {
+        event.stopPropagation(); // Prevent row click
+        if (user.role === "admin") return; // Don't allow toggling admin active status
+
+        const newActiveStatus = !user.active;
+        setUpdatingActive(prev => new Set(prev).add(user.email));
+
+        try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(
+                `${API_BASE_URL}/api/users/toggle-active?email=${encodeURIComponent(user.email)}&active=${newActiveStatus}`,
+                {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to update active status");
+            }
+
+            const result = await response.json();
+
+            // Update local state
+            setUsers(prevUsers =>
+                prevUsers.map(u =>
+                    u.email === user.email ? { ...u, active: result.active } : u
+                )
+            );
+        } catch (err) {
+            console.error("Failed to toggle active status:", err);
+            alert(`Failed to update active status: ${err.message}`);
+        } finally {
+            setUpdatingActive(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(user.email);
+                return newSet;
+            });
+        }
     };
 
     return (
@@ -276,6 +391,8 @@ export default function UserData() {
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>User</TableCell>
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Email</TableCell>
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Role</TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Active Status</TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -314,6 +431,69 @@ export default function UserData() {
                                                 }}
                                             />
                                         </TableCell>
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            {user.role === "admin" ? (
+                                                <Typography sx={{ color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>
+                                                    N/A
+                                                </Typography>
+                                            ) : (
+                                                <Box 
+                                                    display="flex" 
+                                                    alignItems="center" 
+                                                    gap={1}
+                                                    onClick={(e) => e.stopPropagation()} // Prevent row click
+                                                >
+                                                    <Switch
+                                                        checked={user.active !== false}
+                                                        onChange={(e) => handleToggleActive(user, e)}
+                                                        disabled={updatingActive.has(user.email)}
+                                                        size="small"
+                                                        onClick={(e) => e.stopPropagation()} // Prevent row click
+                                                        sx={{
+                                                            "& .MuiSwitch-switchBase.Mui-checked": {
+                                                                color: "#4caf50",
+                                                            },
+                                                            "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                                                backgroundColor: "#4caf50",
+                                                            },
+                                                        }}
+                                                    />
+                                                    <Chip
+                                                        icon={user.active ? <CheckCircleIcon /> : <CancelIcon />}
+                                                        label={user.active ? "Active" : "Inactive"}
+                                                        size="small"
+                                                        onClick={(e) => e.stopPropagation()} // Prevent row click
+                                                        sx={{
+                                                            bgcolor: user.active 
+                                                                ? "rgba(76, 175, 80, 0.2)" 
+                                                                : "rgba(158, 158, 158, 0.2)",
+                                                            color: user.active ? "#4caf50" : "#9e9e9e",
+                                                            fontWeight: 600,
+                                                            minWidth: 80,
+                                                            cursor: "pointer",
+                                                        }}
+                                                    />
+                                                </Box>
+                                            )}
+                                        </TableCell>
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            {!isAdmin && (
+                                                <Tooltip title="Delete User">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => handleDeleteClick(user, e)}
+                                                        sx={{
+                                                            color: "#ff1744",
+                                                            "&:hover": {
+                                                                bgcolor: "rgba(255, 23, 68, 0.1)",
+                                                            },
+                                                        }}
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
+                                        </TableCell>
                                     </TableRow>
                                 );
                             })}
@@ -321,6 +501,60 @@ export default function UserData() {
                     </Table>
                 </TableContainer>
             </Paper>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={handleDeleteCancel}
+                PaperProps={{
+                    sx: {
+                        bgcolor: "rgba(30, 30, 30, 0.95)",
+                        color: "#fff",
+                        borderRadius: 4,
+                        border: "1px solid rgba(255,255,255,0.1)",
+                    },
+                }}
+            >
+                <DialogTitle sx={{ color: "#fff", fontWeight: 600 }}>
+                    Confirm Delete User
+                </DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ color: "rgba(255,255,255,0.8)", mb: 2 }}>
+                        Are you sure you want to delete <strong>{userToDelete?.name || userToDelete?.email}</strong>?
+                    </Typography>
+                    <Typography sx={{ color: "#ff1744", fontSize: "0.875rem" }}>
+                        ⚠️ This action cannot be undone. This will permanently delete:
+                    </Typography>
+                    <Box component="ul" sx={{ color: "rgba(255,255,255,0.7)", fontSize: "0.875rem", pl: 3, mt: 1 }}>
+                        <li>User account</li>
+                        <li>All video completion records</li>
+                        <li>All video watch events</li>
+                        <li>All user progress data</li>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                    <Button
+                        onClick={handleDeleteCancel}
+                        disabled={deleting}
+                        sx={{ color: "rgba(255,255,255,0.7)" }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteConfirm}
+                        disabled={deleting}
+                        variant="contained"
+                        sx={{
+                            bgcolor: "#ff1744",
+                            "&:hover": {
+                                bgcolor: "#d50000",
+                            },
+                        }}
+                    >
+                        {deleting ? <CircularProgress size={24} sx={{ color: "#fff" }} /> : "Delete"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }

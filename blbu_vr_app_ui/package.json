@@ -14,12 +14,16 @@
     "@mui/icons-material": "^7.3.4",
     "@mui/material": "^7.3.4",
     "@mui/x-date-pickers": "^8.17.0",
+    "@popperjs/core": "^2.11.8",
     "@stomp/stompjs": "^7.0.0",
+    "aframe": "^1.7.1",
+    "aframe-extras": "^7.6.1",
     "dayjs": "^1.11.19",
     "next": "16.0.10",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "sockjs-client": "^1.6.1"
+    "sockjs-client": "^1.6.1",
+    "three": "^0.182.0"
   },
   "devDependencies": {
     "eslint": "^9",

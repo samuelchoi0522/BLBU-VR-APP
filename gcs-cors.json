@@ -2,7 +2,8 @@
   {
     "origin": [
       "http://localhost:3000",
-      "https://blbu-vr-app.duckdns.org"
+      "https://blbu-vr-app.duckdns.org",
+      "https://consider-resorts-directory-toxic.trycloudflare.com"
     ],
     "method": ["GET", "PUT", "POST", "DELETE", "OPTIONS"],
     "responseHeader": ["Content-Type", "Content-Length", "Content-Range", "x-goog-resumable"],

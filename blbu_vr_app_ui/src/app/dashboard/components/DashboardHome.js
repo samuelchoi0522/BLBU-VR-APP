@@ -22,6 +22,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import dayjs from "dayjs";
+import DailyCompletionOverview from "./DailyCompletionOverview";
 
 export default function DashboardHome({ setActiveTab }) {
     const [loading, setLoading] = useState(true);
@@ -241,6 +242,11 @@ export default function DashboardHome({ setActiveTab }) {
                         </Paper>
                     );
                 })}
+            </Box>
+
+            {/* Daily Completion Overview */}
+            <Box mb={4}>
+                <DailyCompletionOverview />
             </Box>
 
             {/* Quick Actions */}

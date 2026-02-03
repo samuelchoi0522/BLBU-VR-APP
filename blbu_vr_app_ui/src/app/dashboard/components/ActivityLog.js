@@ -32,6 +32,10 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import ClearIcon from "@mui/icons-material/Clear";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import dayjs from "dayjs";
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 const EVENT_ICONS = {
     SESSION_START: <LoginIcon fontSize="small" />,
@@ -65,6 +69,7 @@ export default function ActivityLog() {
     const [autoScroll, setAutoScroll] = useState(true);
     const [showProgressUpdates, setShowProgressUpdates] = useState(false);
     const [selectedUser, setSelectedUser] = useState(""); // Empty = all users
+    const [selectedDate, setSelectedDate] = useState(null); // null = all dates
     const [vrUsers, setVrUsers] = useState([]); // List of VR app users (non-admins)
     const clientRef = useRef(null);
     const logContainerRef = useRef(null);
@@ -200,8 +205,18 @@ export default function ActivityLog() {
             filtered = filtered.filter((e) => e.email?.toLowerCase() === selectedLower);
         }
         
+        // Filter by selected date
+        if (selectedDate) {
+            const selectedDateStr = dayjs(selectedDate).format("YYYY-MM-DD");
+            filtered = filtered.filter((e) => {
+                if (!e.timestamp) return false;
+                const eventDateStr = dayjs(e.timestamp).format("YYYY-MM-DD");
+                return eventDateStr === selectedDateStr;
+            });
+        }
+        
         return filtered;
-    }, [events, showProgressUpdates, selectedUser]);
+    }, [events, showProgressUpdates, selectedUser, selectedDate]);
 
     const formatTime = (timestamp) => {
         const date = new Date(timestamp);
@@ -214,6 +229,7 @@ export default function ActivityLog() {
     };
 
     return (
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box>
             <Typography variant="h4" fontWeight="700" color="#fff" gutterBottom>
                 Activity Log
@@ -247,14 +263,79 @@ export default function ActivityLog() {
                             }
                             label={connected ? "Live" : "Disconnected"}
                             variant="outlined"
-                            color={connected ? "success" : "error"}
+                            sx={{
+                                color: connected ? "#4caf50" : "#f44336",
+                                borderColor: connected ? "#4caf50" : "#f44336",
+                                bgcolor: connected ? "rgba(76, 175, 80, 0.1)" : "rgba(244, 67, 54, 0.1)",
+                            }}
                         />
-                        <Badge badgeContent={filteredEvents.length} color="primary">
-                            <Typography variant="body2">Events</Typography>
+                        <Badge 
+                            badgeContent={filteredEvents.length} 
+                            sx={{
+                                "& .MuiBadge-badge": {
+                                    bgcolor: "#00d4ff",
+                                    color: "#fff",
+                                },
+                            }}
+                        >
+                            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)" }}>Events</Typography>
                         </Badge>
                     </Box>
 
                     <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+                        {/* Date Filter */}
+                        <DatePicker
+                            label="Filter by Date"
+                            value={selectedDate}
+                            onChange={(newValue) => setSelectedDate(newValue)}
+                            slotProps={{
+                                textField: {
+                                    size: "small",
+                                    sx: {
+                                        minWidth: 200,
+                                        "& .MuiOutlinedInput-root": {
+                                            color: "#fff",
+                                            "& fieldset": { 
+                                                borderColor: "rgba(255,255,255,0.2)",
+                                            },
+                                            "&:hover fieldset": { 
+                                                borderColor: "rgba(255,255,255,0.4)",
+                                            },
+                                            "&.Mui-focused fieldset": { 
+                                                borderColor: "#00d4ff",
+                                            },
+                                        },
+                                        "& .MuiInputLabel-root": { 
+                                            color: "rgba(255,255,255,0.5)",
+                                        },
+                                        "& .MuiInputLabel-root.Mui-focused": { 
+                                            color: "#00d4ff",
+                                        },
+                                        "& .MuiSvgIcon-root": { 
+                                            color: "rgba(255,255,255,0.5)",
+                                        },
+                                    },
+                                    InputProps: {
+                                        endAdornment: selectedDate && (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setSelectedDate(null)}
+                                                sx={{ 
+                                                    mr: 1,
+                                                    color: "rgba(255,255,255,0.5)",
+                                                    "&:hover": {
+                                                        color: "#00d4ff",
+                                                    },
+                                                }}
+                                            >
+                                                <ClearIcon fontSize="small" />
+                                            </IconButton>
+                                        ),
+                                    },
+                                },
+                            }}
+                        />
+
                         {/* User Filter */}
                         <FormControl
                             size="small"
@@ -354,11 +435,14 @@ export default function ActivityLog() {
             {/* Events Log */}
             <Paper
                 ref={logContainerRef}
+                elevation={0}
                 sx={{
                     height: "60vh",
                     overflow: "auto",
-                    borderRadius: 2,
-                    bgcolor: "#1e1e1e",
+                    borderRadius: 3,
+                    bgcolor: "rgba(255,255,255,0.05)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
                     fontFamily: "monospace",
                 }}
             >
@@ -368,9 +452,8 @@ export default function ActivityLog() {
                         justifyContent="center"
                         alignItems="center"
                         height="100%"
-                        color="text.secondary"
                     >
-                        <Typography>No events yet. Waiting for user activity...</Typography>
+                        <Typography sx={{ color: "rgba(255,255,255,0.6)" }}>No events yet. Waiting for user activity...</Typography>
                     </Box>
                 ) : (
                     filteredEvents.map((event, index) => (
@@ -389,7 +472,7 @@ export default function ActivityLog() {
                                         ? "rgba(76, 175, 80, 0.1)"
                                         : "transparent",
                                 "&:hover": {
-                                    bgcolor: "rgba(255,255,255,0.05)",
+                                    bgcolor: "rgba(255,255,255,0.08)",
                                 },
                             }}
                         >
@@ -538,6 +621,7 @@ export default function ActivityLog() {
                 </Box>
             </Paper>
         </Box>
+        </LocalizationProvider>
     );
 }
 

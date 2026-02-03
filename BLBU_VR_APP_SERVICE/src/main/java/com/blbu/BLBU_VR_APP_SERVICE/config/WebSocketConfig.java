@@ -23,9 +23,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // WebSocket endpoint that clients will connect to
         // Allow specific origins for CORS
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(
+                .setAllowedOriginPatterns(
                         "http://localhost:3000",
-                        "https://blbu-vr-app.duckdns.org"
+                        "https://blbu-vr-app.duckdns.org",
+                        "https://*.trycloudflare.com"
                 )
                 .withSockJS();
     }

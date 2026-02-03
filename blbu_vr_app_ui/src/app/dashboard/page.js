@@ -8,6 +8,7 @@ import Uploads from "./components/Uploads";
 import ManageVideos from "./components/ManageVideos";
 import UserData from "./components/UserData";
 import ActivityLog from "./components/ActivityLog";
+import DailyReports from "./components/DailyReports";
 
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState("dashboard");
@@ -104,6 +105,7 @@ export default function DashboardPage() {
                 {activeTab === "manage" && <ManageVideos />}
                 {activeTab === "users" && <UserData />}
                 {activeTab === "activity" && <ActivityLog />}
+                {activeTab === "reports" && <DailyReports />}
             </Box>
         </Box>
     );

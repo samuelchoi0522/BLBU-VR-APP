@@ -18,6 +18,7 @@ import VideoLibraryIcon from "@mui/icons-material/VideoLibrary";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import GroupIcon from "@mui/icons-material/Group";
 import MonitorIcon from "@mui/icons-material/Monitor";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { useRouter } from "next/navigation";
@@ -28,6 +29,7 @@ const menuItems = [
     { id: "manage", label: "Manage Videos", icon: EditNoteIcon },
     { id: "users", label: "User Data", icon: GroupIcon },
     { id: "activity", label: "Activity Log", icon: MonitorIcon, badge: true },
+    { id: "reports", label: "Daily Reports", icon: AssessmentIcon },
 ];
 
 export default function Sidebar({ activeTab, setActiveTab }) {

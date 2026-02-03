@@ -255,6 +255,21 @@ public class VideoService {
         return "Updated metadata for video: " + filename;
     }
 
+    public boolean isVideoCompleted(String email, LocalDate date) {
+        try {
+            Optional<VideoMetadata> videoOpt = repository.findByAssignedDate(date);
+            if (videoOpt.isEmpty()) {
+                return false;
+            }
+            VideoMetadata video = videoOpt.get();
+            Optional<VideoCompletion> completion = completionRepository.findByEmailAndVideo_Id(email, video.getId());
+            return completion.isPresent();
+        } catch (Exception e) {
+            System.err.println("Error checking video completion: " + e.getMessage());
+            return false;
+        }
+    }
+
     public void recordVideoCompletion(String email, LocalDate date) {
 
         VideoMetadata video = repository.findByAssignedDate(date)
