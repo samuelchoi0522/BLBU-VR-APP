@@ -29,6 +29,10 @@ public class VRAppUser {
     @Builder.Default
     private Boolean active = true; // Default to true for new users
 
+    @Column(name = "current_day", nullable = false, columnDefinition = "INTEGER DEFAULT 1")
+    @Builder.Default
+    private Integer currentDay = 1; // User's current day in the program (starts at 1)
+
     // Transient field - not persisted to vr_app_users table, used only for registration
     @Transient
     private String password;

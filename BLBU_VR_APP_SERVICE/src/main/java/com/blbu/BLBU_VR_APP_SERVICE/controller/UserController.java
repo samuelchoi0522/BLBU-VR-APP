@@ -133,4 +133,26 @@ public class UserController {
         }
     }
 
+    /**
+     * Update user's current day (admin only)
+     */
+    @PostMapping("/update-current-day")
+    public ResponseEntity<?> updateUserCurrentDay(
+            @RequestParam String email,
+            @RequestParam Integer currentDay) {
+        try {
+            if (currentDay < 1) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Current day must be at least 1"));
+            }
+            VRAppUser user = vrAppUserService.updateUserCurrentDay(email, currentDay);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "email", user.getEmail(),
+                    "currentDay", user.getCurrentDay()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
 }

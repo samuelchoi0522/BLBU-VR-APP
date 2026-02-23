@@ -8,46 +8,45 @@ import {
     Button,
     Box,
     Snackbar,
-    Alert
+    Alert,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import dayjs from "dayjs";
 
 export default function EditVideoModal({ open, onClose, video, onUpdated, videos }) {
     const originalTitle = video?.title || "";
-    const originalDate = video?.assignedDate ? dayjs(video.assignedDate) : null;
-    const takenDates = videos
-        .filter(v => v.id !== video.id)
-        .map(v => dayjs(v.assignedDate).format("YYYY-MM-DD"));
+    const originalDisplayOrder = video?.displayOrder || "";
     const [title, setTitle] = useState(originalTitle);
-    const [date, setDate] = useState(originalDate);
+    const [displayOrder, setDisplayOrder] = useState(originalDisplayOrder);
     const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
 
     useEffect(() => {
         setTitle(originalTitle);
-        setDate(originalDate);
+        setDisplayOrder(originalDisplayOrder);
     }, [video]);
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
     const handleSubmit = async () => {
-        if (!title || !date) {
-            setSnack({ open: true, msg: "Title and date are required", severity: "warning" });
+        if (!title) {
+            setSnack({ open: true, msg: "Title is required", severity: "warning" });
             return;
         }
 
-        const formData = new FormData();
-        formData.append("filename", video.filename);
-        formData.append("file", new Blob([]), "empty");
-        formData.append("title", title);
-        formData.append("date", dayjs(date).format("YYYY-MM-DD"));
-        formData.append("compress", false);
-
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/videos/assign`, {
+            const params = new URLSearchParams({
+                filename: video.filename,
+                title: title,
+            });
+            if (displayOrder) {
+                params.append("displayOrder", displayOrder);
+            }
+
+            const res = await fetch(`${API_BASE_URL}/api/videos/assign?${params}`, {
                 method: "PUT",
-                body: formData,
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -70,9 +69,9 @@ export default function EditVideoModal({ open, onClose, video, onUpdated, videos
     // ✅ Disable button if no change or empty input
     const isUnchanged =
         title === originalTitle &&
-        dayjs(date).format("YYYY-MM-DD") === dayjs(originalDate).format("YYYY-MM-DD");
+        (displayOrder || "") === (originalDisplayOrder || "");
 
-    const isDisabled = !title || !date || isUnchanged;
+    const isDisabled = !title || isUnchanged;
 
     return (
         <>
@@ -91,18 +90,21 @@ export default function EditVideoModal({ open, onClose, video, onUpdated, videos
                             onChange={(e) => setTitle(e.target.value)}
                         />
 
-                        <DatePicker
-                            label="Assigned Date"
-                            value={date}
-                            onChange={(v) => setDate(v)}
-                            shouldDisableDate={(day) => {
-                                const formatted = day.format("YYYY-MM-DD");
-
-                                if (day.isBefore(dayjs(), "day")) return true; // past dates block
-                                return takenDates.includes(formatted); // prevent duplicate
-                            }}
-                            slotProps={{ textField: { fullWidth: true } }}
-                        />
+                        <FormControl fullWidth>
+                            <InputLabel>Video Order (Optional)</InputLabel>
+                            <Select
+                                value={displayOrder || ""}
+                                onChange={(e) => setDisplayOrder(e.target.value)}
+                                label="Video Order (Optional)"
+                            >
+                                <MenuItem value="">None</MenuItem>
+                                {[1, 2, 3, 4, 5, 6, 7].map((order) => (
+                                    <MenuItem key={order} value={order}>
+                                        {order} (Days {order * 2 - 1}-{order * 2})
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
 
                         <TextField

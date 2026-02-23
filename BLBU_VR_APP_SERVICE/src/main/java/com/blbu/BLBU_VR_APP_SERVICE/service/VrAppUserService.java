@@ -104,11 +104,24 @@ public class VrAppUserService {
         // Check if today's video has been watched
         boolean todayCompleted = completedDates.contains(LocalDate.now().toString());
 
+        // Get user's current day
+        Optional<VRAppUser> userOpt = vrAppUserRepository.findByEmail(email);
+        int currentDay = userOpt.map(VRAppUser::getCurrentDay).orElse(1);
+        
+        // Debug logging
+        System.out.println("getUserProgress for " + email + ": currentDay = " + currentDay);
+        if (userOpt.isPresent()) {
+            System.out.println("User found, currentDay from entity: " + userOpt.get().getCurrentDay());
+        } else {
+            System.out.println("User not found, using default currentDay = 1");
+        }
+
         Map<String, Object> progress = new HashMap<>();
         progress.put("completedDates", completedDates);
         progress.put("streak", streak);
         progress.put("totalCompleted", totalCompleted);
         progress.put("todayCompleted", todayCompleted);
+        progress.put("currentDay", currentDay);
 
         return progress;
     }
@@ -130,6 +143,7 @@ public class VrAppUserService {
                         .firstName("User") // Default values - admin should update these
                         .lastName("")
                         .active(active)
+                        .currentDay(1) // Start at day 1
                         .build();
                 vrUser = vrAppUserRepository.save(vrUser);
             } else {
@@ -228,5 +242,15 @@ public class VrAppUserService {
 
         System.out.println("Successfully deleted user and all related data: " + email);
         return true;
+    }
+
+    /**
+     * Update user's current day
+     */
+    public VRAppUser updateUserCurrentDay(String email, Integer currentDay) {
+        VRAppUser user = vrAppUserRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        user.setCurrentDay(currentDay);
+        return vrAppUserRepository.save(user);
     }
 }

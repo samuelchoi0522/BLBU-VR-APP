@@ -18,13 +18,18 @@ import {
     Box,
     Alert,
     CircularProgress,
+    Switch,
+    IconButton,
+    Tooltip,
 } from "@mui/material";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import { useRouter } from "next/navigation";
-import { Switch, IconButton, Tooltip } from "@mui/material";
 
 export default function UserData() {
     const [users, setUsers] = useState([]);
@@ -37,6 +42,9 @@ export default function UserData() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [editingDay, setEditingDay] = useState(null);
+    const [dayValue, setDayValue] = useState("");
+    const [updatingDay, setUpdatingDay] = useState(new Set());
     const router = useRouter();
 
     const API_BASE_URL =
@@ -59,6 +67,7 @@ export default function UserData() {
                     email: u.email,
                     role: "user",
                     active: u.active !== undefined ? u.active : true, // Default to true if not set
+                    currentDay: u.currentDay || 1, // Default to 1 if not set
                 }));
 
                 setUsers([...adminUsers, ...vrAppUsers]);
@@ -216,6 +225,53 @@ export default function UserData() {
             alert(`Failed to update active status: ${err.message}`);
         } finally {
             setUpdatingActive(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(user.email);
+                return newSet;
+            });
+        }
+    };
+
+    const handleSaveDay = async (user) => {
+        const newDay = parseInt(dayValue);
+        if (isNaN(newDay) || newDay < 1) {
+            alert("Day must be a positive number");
+            return;
+        }
+
+        setUpdatingDay(prev => new Set(prev).add(user.email));
+
+        try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(
+                `${API_BASE_URL}/api/users/update-current-day?email=${encodeURIComponent(user.email)}&currentDay=${newDay}`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to update current day");
+            }
+
+            // Update local state
+            setUsers(prevUsers =>
+                prevUsers.map(u =>
+                    u.email === user.email ? { ...u, currentDay: newDay } : u
+                )
+            );
+
+            setEditingDay(null);
+            setDayValue("");
+        } catch (err) {
+            console.error("Failed to update current day:", err);
+            alert(`Failed to update current day: ${err.message}`);
+        } finally {
+            setUpdatingDay(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(user.email);
                 return newSet;
@@ -391,6 +447,7 @@ export default function UserData() {
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>User</TableCell>
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Email</TableCell>
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Role</TableCell>
+                                <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Current Day</TableCell>
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Active Status</TableCell>
                                 <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Actions</TableCell>
                             </TableRow>
@@ -430,6 +487,69 @@ export default function UserData() {
                                                     fontWeight: 600,
                                                 }}
                                             />
+                                        </TableCell>
+                                        <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                            {isAdmin ? (
+                                                <Typography sx={{ color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>
+                                                    N/A
+                                                </Typography>
+                                            ) : editingDay === user.email ? (
+                                                <Box display="flex" alignItems="center" gap={0.5} onClick={(e) => e.stopPropagation()}>
+                                                    <TextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={dayValue}
+                                                        onChange={(e) => setDayValue(e.target.value)}
+                                                        inputProps={{ min: 1, style: { color: "#fff", textAlign: "center", width: 60 } }}
+                                                        sx={{
+                                                            "& .MuiOutlinedInput-root": {
+                                                                "& fieldset": { borderColor: "rgba(255,255,255,0.3)" },
+                                                                "&:hover fieldset": { borderColor: "#00d4ff" },
+                                                                "&.Mui-focused fieldset": { borderColor: "#00d4ff" },
+                                                            },
+                                                        }}
+                                                    />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleSaveDay(user);
+                                                        }}
+                                                        disabled={updatingDay.has(user.email)}
+                                                        sx={{ color: "#4caf50" }}
+                                                    >
+                                                        <CheckIcon fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingDay(null);
+                                                            setDayValue("");
+                                                        }}
+                                                        sx={{ color: "#ff1744" }}
+                                                    >
+                                                        <CloseIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            ) : (
+                                                <Box display="flex" alignItems="center" gap={1} onClick={(e) => e.stopPropagation()}>
+                                                    <Typography sx={{ color: "#fff", minWidth: 30 }}>
+                                                        {user.currentDay || 1}
+                                                    </Typography>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingDay(user.email);
+                                                            setDayValue(user.currentDay || 1);
+                                                        }}
+                                                        sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#00d4ff" } }}
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            )}
                                         </TableCell>
                                         <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
                                             {user.role === "admin" ? (

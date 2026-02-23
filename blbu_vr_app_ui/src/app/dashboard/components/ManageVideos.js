@@ -26,6 +26,10 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
 
 import dayjs from "dayjs";
 import EditVideoModal from "./EditVideoModal";
@@ -79,7 +83,13 @@ export default function ManageVideos() {
 
             if (res.ok) {
                 const data = await res.json();
-                const sortedVideos = data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+                // Sort by display order first, then by updated date
+                const sortedVideos = data.sort((a, b) => {
+                    const orderA = a.displayOrder || 999;
+                    const orderB = b.displayOrder || 999;
+                    if (orderA !== orderB) return orderA - orderB;
+                    return new Date(b.updatedAt) - new Date(a.updatedAt);
+                });
                 setVideos(sortedVideos);
             } else {
                 setSnack({ open: true, msg: "Failed to load videos", severity: "error" });
@@ -88,6 +98,81 @@ export default function ManageVideos() {
             setSnack({ open: true, msg: "Error fetching videos", severity: "error" });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleUpdateDisplayOrder = async (videoId, newOrder) => {
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(
+                `${API_BASE_URL}/api/videos/update-display-order?videoId=${videoId}&displayOrder=${newOrder}`,
+                {
+                    method: "PUT",
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            if (res.ok) {
+                setSnack({ open: true, msg: "Display order updated successfully", severity: "success" });
+                fetchVideos();
+            } else {
+                const errorText = await res.text();
+                setSnack({ open: true, msg: `Failed to update: ${errorText}`, severity: "error" });
+            }
+        } catch (err) {
+            setSnack({ open: true, msg: "Error updating display order", severity: "error" });
+        }
+    };
+
+    const handleDragStart = (e, index) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("index", index);
+        e.currentTarget.style.opacity = "0.5";
+    };
+
+    const handleDragEnd = (e) => {
+        e.currentTarget.style.opacity = "1";
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleDrop = async (e, dropIndex) => {
+        e.preventDefault();
+        const dragIndex = parseInt(e.dataTransfer.getData("index"));
+        
+        if (dragIndex === dropIndex) return;
+
+        // Reorder videos array
+        const newVideos = [...videos];
+        const draggedVideo = newVideos[dragIndex];
+        newVideos.splice(dragIndex, 1);
+        newVideos.splice(dropIndex, 0, draggedVideo);
+
+        // Update display orders based on new positions
+        const token = localStorage.getItem("token");
+        const updatePromises = newVideos.map((video, index) => {
+            const newOrder = index + 1;
+            if (video.displayOrder !== newOrder) {
+                return fetch(
+                    `${API_BASE_URL}/api/videos/update-display-order?videoId=${video.id}&displayOrder=${newOrder}`,
+                    {
+                        method: "PUT",
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+            }
+            return Promise.resolve();
+        });
+
+        try {
+            await Promise.all(updatePromises);
+            setSnack({ open: true, msg: "Video order updated successfully", severity: "success" });
+            fetchVideos(); // Refresh to get updated order
+        } catch (err) {
+            setSnack({ open: true, msg: "Error updating video order", severity: "error" });
         }
     };
 
@@ -145,9 +230,15 @@ export default function ManageVideos() {
             <Typography variant="h4" fontWeight="700" color="#fff" gutterBottom>
                 Manage Videos
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)" }} mb={3}>
+            <Typography sx={{ color: "rgba(255,255,255,0.6)" }} mb={2}>
                 Edit, update, or delete your uploaded videos.
             </Typography>
+            <Box sx={{ mb: 3, p: 2, bgcolor: "rgba(0,212,255,0.1)", borderRadius: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                <DragIndicatorIcon sx={{ color: "#00d4ff" }} />
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
+                    Drag rows by the handle icon to reorder videos. Order will be updated automatically.
+                </Typography>
+            </Box>
 
             {loading ? (
                 <Box display="flex" justifyContent="center" alignItems="center" height={200}>
@@ -168,31 +259,74 @@ export default function ManageVideos() {
                         <Table>
                             <TableHead>
                                 <TableRow>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600, width: 40 }}></TableCell>
+                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Order</TableCell>
                                     <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Title</TableCell>
                                     <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Filename</TableCell>
                                     <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Date Created</TableCell>
                                     <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Last Updated</TableCell>
-                                    <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }}>Date Assigned</TableCell>
                                     <TableCell sx={{ color: "rgba(255,255,255,0.6)", borderColor: "rgba(255,255,255,0.1)", fontWeight: 600 }} align="center">Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {videos.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                        <TableCell colSpan={7} align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
                                             <Typography sx={{ color: "rgba(255,255,255,0.5)" }} py={3}>
                                                 No videos uploaded yet
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    videos.map((video) => (
-                                        <TableRow key={video.id} sx={{ "&:hover": { bgcolor: "rgba(255,255,255,0.03)" } }}>
+                                    videos.map((video, index) => (
+                                        <TableRow 
+                                            key={video.id} 
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, index)}
+                                            onDragOver={handleDragOver}
+                                            onDrop={(e) => handleDrop(e, index)}
+                                            onDragEnd={handleDragEnd}
+                                            sx={{ 
+                                                "&:hover": { bgcolor: "rgba(255,255,255,0.03)" },
+                                                cursor: "move",
+                                                transition: "all 0.2s",
+                                            }}
+                                        >
+                                            <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)", width: 40 }}>
+                                                <DragIndicatorIcon sx={{ color: "rgba(255,255,255,0.5)", cursor: "grab" }} />
+                                            </TableCell>
+                                            <TableCell sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                                                <FormControl size="small" sx={{ minWidth: 80 }}>
+                                                    <Select
+                                                        value={video.displayOrder || ""}
+                                                        onChange={(e) => handleUpdateDisplayOrder(video.id, e.target.value)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        sx={{
+                                                            color: "#fff",
+                                                            "& .MuiOutlinedInput-notchedOutline": {
+                                                                borderColor: "rgba(255,255,255,0.3)",
+                                                            },
+                                                            "&:hover .MuiOutlinedInput-notchedOutline": {
+                                                                borderColor: "rgba(255,255,255,0.5)",
+                                                            },
+                                                            "& .MuiSvgIcon-root": {
+                                                                color: "#fff",
+                                                            },
+                                                        }}
+                                                    >
+                                                        <MenuItem value="">None</MenuItem>
+                                                        {[1, 2, 3, 4, 5, 6, 7].map((order) => (
+                                                            <MenuItem key={order} value={order}>
+                                                                {order} (Days {order * 2 - 1}-{order * 2})
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </FormControl>
+                                            </TableCell>
                                             <TableCell sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.1)" }}>{video.title || "Untitled"}</TableCell>
                                             <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)", fontFamily: "monospace", fontSize: "0.8rem" }}>{video.filename}</TableCell>
                                             <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateToCST(video.createdAt)}</TableCell>
                                             <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateToCST(video.updatedAt)}</TableCell>
-                                            <TableCell sx={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.1)" }}>{formatDateOnly(video.assignedDate)}</TableCell>
                                             <TableCell align="center" sx={{ borderColor: "rgba(255,255,255,0.1)" }}>
                                                 <Box display="flex" justifyContent="center" gap={0.5}>
                                                     <IconButton size="small" onClick={() => window.open(video.gcsUrl, "_blank")} sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#00d4ff" } }}>

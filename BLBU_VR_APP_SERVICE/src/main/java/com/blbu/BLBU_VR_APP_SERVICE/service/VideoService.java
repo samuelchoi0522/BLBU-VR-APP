@@ -18,6 +18,9 @@ import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoWatchEventRepository;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VRAppUserRepository;
+import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
+import java.util.List;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.Blob;
@@ -34,14 +37,17 @@ public class VideoService {
     private final String bucketName = "vr_therapy_videos";
     private final VideoCompletionRepository completionRepository;
     private final VideoWatchEventRepository watchEventRepository;
+    private final VRAppUserRepository vrAppUserRepository;
 
     public VideoService(Storage storage, VideoMetadataRepository repository, 
                        VideoCompletionRepository completionRepository,
-                       VideoWatchEventRepository watchEventRepository) {
+                       VideoWatchEventRepository watchEventRepository,
+                       VRAppUserRepository vrAppUserRepository) {
         this.storage = storage;
         this.repository = repository;
         this.completionRepository = completionRepository;
         this.watchEventRepository = watchEventRepository;
+        this.vrAppUserRepository = vrAppUserRepository;
     }
 
     /**
@@ -110,10 +116,10 @@ public class VideoService {
      *
      * @param filename The filename that was uploaded to GCS
      * @param title The video title
-     * @param date The date to assign the video to
+     * @param displayOrder The display order (1-7) for the video sequence
      * @return The GCS URL of the uploaded video
      */
-    public String confirmUploadAndAssign(String filename, String title, LocalDate date) {
+    public String confirmUploadAndAssign(String filename, String title, Integer displayOrder) {
         // Verify the file exists in GCS
         Blob blob = storage.get(BlobId.of(bucketName, filename));
         if (blob == null) {
@@ -123,15 +129,17 @@ public class VideoService {
         String gcsUrl = String.format("https://storage.googleapis.com/%s/%s", bucketName, filename);
 
         // Save or update metadata
-        Optional<VideoMetadata> existing = repository.findByAssignedDate(date);
+        Optional<VideoMetadata> existing = repository.findByFilename(filename);
         VideoMetadata metadata = existing.orElse(new VideoMetadata());
         metadata.setFilename(filename);
         metadata.setTitle(title);
         metadata.setGcsUrl(gcsUrl);
-        metadata.setAssignedDate(date);
+        if (displayOrder != null) {
+            metadata.setDisplayOrder(displayOrder);
+        }
         repository.save(metadata);
 
-        System.out.println("Confirmed upload and assigned video for " + date + " -> " + gcsUrl);
+        System.out.println("Confirmed upload for video: " + title + " (order: " + displayOrder + ") -> " + gcsUrl);
         return gcsUrl;
     }
 
@@ -242,12 +250,14 @@ public class VideoService {
         }
     }
 
-    public String updateMetadata(String filename, String newTitle, LocalDate newDate) {
+    public String updateMetadata(String filename, String newTitle, Integer displayOrder) {
         VideoMetadata metadata = repository.findByFilename(filename)
                 .orElseThrow(() -> new RuntimeException("Video not found for filename: " + filename));
 
         metadata.setTitle(newTitle);
-        metadata.setAssignedDate(newDate);
+        if (displayOrder != null) {
+            metadata.setDisplayOrder(displayOrder);
+        }
         metadata.setUpdatedAt(LocalDateTime.now());
 
         repository.save(metadata);
@@ -282,5 +292,82 @@ public class VideoService {
                 .build();
 
         completionRepository.save(completion);
+    }
+
+    /**
+     * Get video for a user based on their current day
+     * Day 1-2: Video with displayOrder=1
+     * Day 3-4: Video with displayOrder=2
+     * Day 5-6: Video with displayOrder=3
+     * Day 7-8: Video with displayOrder=4
+     * Day 9-10: Video with displayOrder=5
+     * Day 11-12: Video with displayOrder=6
+     * Day 13-14: Video with displayOrder=7
+     */
+    public VideoMetadata getVideoForUserDay(String email) {
+        VRAppUser user = vrAppUserRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        
+        int currentDay = user.getCurrentDay();
+        // Calculate which video order (1-7) based on day
+        // Days 1-2 -> order 1, Days 3-4 -> order 2, etc.
+        int videoOrder = ((currentDay - 1) / 2) + 1;
+        
+        // Find video with this display order
+        Optional<VideoMetadata> videoOpt = repository.findByDisplayOrder(videoOrder);
+        
+        if (videoOpt.isEmpty()) {
+            throw new RuntimeException("No video found with display order " + videoOrder + " for user day " + currentDay);
+        }
+        
+        return videoOpt.get();
+    }
+
+    /**
+     * Update video display order
+     */
+    public void updateVideoDisplayOrder(Long videoId, Integer displayOrder) {
+        VideoMetadata video = repository.findById(videoId)
+                .orElseThrow(() -> new RuntimeException("Video not found: " + videoId));
+        video.setDisplayOrder(displayOrder);
+        repository.save(video);
+    }
+
+    /**
+     * Check if user has completed their current video twice (required to advance)
+     */
+    public boolean hasCompletedVideoTwice(String email, Long videoId) {
+        List<VideoCompletion> completions = completionRepository.findAllByEmail(email);
+        long count = completions.stream()
+                .filter(c -> c.getVideo().getId().equals(videoId))
+                .count();
+        return count >= 2;
+    }
+
+    /**
+     * Record video completion and advance user day if they've completed the video twice
+     */
+    @Transactional
+    public void recordVideoCompletionAndAdvance(String email) {
+        VRAppUser user = vrAppUserRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        
+        VideoMetadata currentVideo = getVideoForUserDay(email);
+        
+        // Record the completion
+        VideoCompletion completion = VideoCompletion.builder()
+                .email(email)
+                .video(currentVideo)
+                .completedAt(LocalDateTime.now())
+                .build();
+        completionRepository.save(completion);
+        
+        // Check if user has completed this video twice
+        if (hasCompletedVideoTwice(email, currentVideo.getId())) {
+            // Advance to next day
+            user.setCurrentDay(user.getCurrentDay() + 1);
+            vrAppUserRepository.save(user);
+            System.out.println("User " + email + " advanced to day " + user.getCurrentDay());
+        }
     }
 }

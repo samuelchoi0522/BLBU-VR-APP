@@ -33,6 +33,7 @@ export default function UserDashboard() {
         streak: 0,
         totalCompleted: 0,
         todayCompleted: false,
+        currentDay: 1,
     });
     const [todaysVideo, setTodaysVideo] = useState(null); // Now contains {id, title, url}
     const [videoError, setVideoError] = useState(null);
@@ -107,6 +108,8 @@ export default function UserDashboard() {
             });
             if (res.ok) {
                 const data = await res.json();
+                console.log("Progress data received:", data); // Debug log
+                console.log("Current day from API:", data.currentDay); // Debug log
                 setProgress(data);
             }
         } catch (err) {
@@ -114,19 +117,19 @@ export default function UserDashboard() {
         }
     }, [API_BASE_URL]);
 
-    const fetchTodaysVideo = useCallback(async (token) => {
+    const fetchTodaysVideo = useCallback(async (token, email) => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/videos/today/metadata`, {
+            const res = await fetch(`${API_BASE_URL}/api/videos/user-video?email=${encodeURIComponent(email)}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
                 const data = await res.json();
-                setTodaysVideo(data); // {id, title, url, assignedDate}
+                setTodaysVideo(data); // {id, title, url, displayOrder}
             } else {
-                setVideoError("No video scheduled for today");
+                setVideoError("No video available for your current day");
             }
         } catch (err) {
-            setVideoError("Failed to load today's video");
+            setVideoError("Failed to load your video");
         }
     }, [API_BASE_URL]);
 
@@ -169,7 +172,7 @@ export default function UserDashboard() {
                 setUserEmail(data.email);
                 await Promise.all([
                     fetchProgress(data.email, token),
-                    fetchTodaysVideo(token),
+                    fetchTodaysVideo(token, data.email),
                 ]);
             } catch (err) {
                 console.error("Auth check failed:", err);
@@ -182,6 +185,37 @@ export default function UserDashboard() {
         checkAuth();
     }, [router, API_BASE_URL, fetchProgress, fetchTodaysVideo]);
 
+    // Refresh progress periodically (every 10 seconds) and when page becomes visible
+    useEffect(() => {
+        if (!userEmail || loading) return;
+
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        // Refresh immediately when page becomes visible
+        const handleVisibilityChange = () => {
+            if (!document.hidden && userEmail) {
+                fetchProgress(userEmail, token);
+                fetchTodaysVideo(token, userEmail);
+            }
+        };
+
+        // Set up periodic refresh (every 10 seconds for more responsive updates)
+        const refreshInterval = setInterval(() => {
+            if (userEmail && !document.hidden) {
+                fetchProgress(userEmail, token);
+                fetchTodaysVideo(token, userEmail);
+            }
+        }, 10000); // 10 seconds
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            clearInterval(refreshInterval);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
+    }, [userEmail, loading, fetchProgress, fetchTodaysVideo, API_BASE_URL]);
+
     const handleLogout = () => {
         localStorage.clear();
         router.push("/");
@@ -189,22 +223,22 @@ export default function UserDashboard() {
 
     const handleMarkComplete = async () => {
         const token = localStorage.getItem("token");
-        const today = dayjs().format("YYYY-MM-DD");
 
         try {
-            const params = new URLSearchParams({
-                email: userEmail,
-                date: today,
-            });
-
-            const res = await fetch(`${API_BASE_URL}/api/videos/save-video-completion?${params}`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(
+                `${API_BASE_URL}/api/videos/save-video-completion-by-day?email=${encodeURIComponent(userEmail)}`,
+                {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
 
             if (res.ok) {
-                // Refresh progress
-                await fetchProgress(userEmail, token);
+                // Refresh progress and video (in case day advanced)
+                await Promise.all([
+                    fetchProgress(userEmail, token),
+                    fetchTodaysVideo(token, userEmail),
+                ]);
             }
         } catch (err) {
             console.error("Failed to mark complete:", err);
@@ -291,6 +325,18 @@ export default function UserDashboard() {
                             {userEmail}
                         </Typography>
                     </Box>
+                    <Chip
+                        label={`Day ${progress.currentDay || 1}`}
+                        sx={{
+                            bgcolor: "rgba(0, 212, 255, 0.2)",
+                            color: "#00d4ff",
+                            fontWeight: 700,
+                            fontSize: "1rem",
+                            height: 36,
+                            border: "2px solid #00d4ff",
+                            px: 1,
+                        }}
+                    />
                 </Box>
                 <Box display="flex" alignItems="center" gap={2}>
                     {/* Device Type Indicator */}
@@ -328,11 +374,36 @@ export default function UserDashboard() {
                 <Box
                     sx={{
                         display: "grid",
-                        gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(3, 1fr)" },
+                        gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
                         gap: 3,
                         mb: 4,
                     }}
                 >
+                    {/* Current Day Card */}
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            p: 3,
+                            borderRadius: 4,
+                            background: "linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)",
+                            color: "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 2,
+                            gridColumn: { xs: "span 2", md: "span 1" },
+                        }}
+                    >
+                        <CalendarMonthIcon sx={{ fontSize: 48 }} />
+                        <Box>
+                            <Typography variant="h3" fontWeight="800">
+                                {progress.currentDay || 1}
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                Current Day
+                            </Typography>
+                        </Box>
+                    </Paper>
+
                     {/* Streak Card */}
                     <Paper
                         elevation={0}

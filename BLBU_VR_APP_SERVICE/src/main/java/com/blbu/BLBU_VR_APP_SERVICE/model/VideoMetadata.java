@@ -29,6 +29,9 @@ public class VideoMetadata {
     @Column(name = "assigned_date", columnDefinition = "DATE")
     private LocalDate assignedDate;
 
+    @Column(name = "display_order")
+    private Integer displayOrder; // Order of video in the 7-video sequence (1-7)
+
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 

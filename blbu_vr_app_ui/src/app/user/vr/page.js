@@ -250,9 +250,8 @@ function VRVideoPlayerContent() {
             leftEarlyRef.current = false; // Reset flag since video was completed
             sendEvent("VIDEO_COMPLETE", `Completed! ${watchedPercent.toFixed(1)}%`);
             const token = localStorage.getItem("token");
-            const today = new Date().toISOString().split('T')[0];
             try {
-                await fetch(`${API_BASE_URL}/api/videos/save-video-completion?email=${encodeURIComponent(userEmail)}&date=${today}`, {
+                await fetch(`${API_BASE_URL}/api/videos/save-video-completion-by-day?email=${encodeURIComponent(userEmail)}`, {
                     method: "POST",
                     headers: { Authorization: `Bearer ${token}` },
                 });

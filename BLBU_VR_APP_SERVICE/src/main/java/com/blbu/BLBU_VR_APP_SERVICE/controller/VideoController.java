@@ -53,10 +53,10 @@ public class VideoController {
     public ResponseEntity<String> confirmUpload(
             @RequestParam("filename") String filename,
             @RequestParam("title") String title,
-            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(value = "displayOrder", required = false) Integer displayOrder) {
         try {
-            String url = videoService.confirmUploadAndAssign(filename, title, date);
-            return ResponseEntity.ok("Assigned video for " + date + " at " + url);
+            String url = videoService.confirmUploadAndAssign(filename, title, displayOrder);
+            return ResponseEntity.ok("Video uploaded successfully at " + url);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error confirming upload: " + e.getMessage());
@@ -67,10 +67,10 @@ public class VideoController {
     public ResponseEntity<String> updateAssignment(
             @RequestParam("filename") String filename,
             @RequestParam("title") String title,
-            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam(value = "displayOrder", required = false) Integer displayOrder
     ) {
         try {
-            videoService.updateMetadata(filename, title, date);
+            videoService.updateMetadata(filename, title, displayOrder);
             return ResponseEntity.ok("Updated video metadata");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -198,6 +198,60 @@ public class VideoController {
         try {
             videoService.recordVideoCompletion(email, date);
             return ResponseEntity.ok("Recorded video completion for " + email + " on " + date);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error recording video completion: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get video for user based on their current day
+     */
+    @GetMapping("/user-video")
+    public ResponseEntity<?> getUserVideo(@RequestParam("email") String email) {
+        try {
+            VideoMetadata metadata = videoService.getVideoForUserDay(email);
+            String publicUrl = videoService.getVideoPublicUrl(metadata.getFilename());
+            return ResponseEntity.ok(Map.of(
+                    "id", metadata.getId(),
+                    "title", metadata.getTitle() != null ? metadata.getTitle() : "Your Session",
+                    "url", publicUrl,
+                    "displayOrder", metadata.getDisplayOrder() != null ? metadata.getDisplayOrder() : 0
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "No video found for user: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update video display order (admin only)
+     */
+    @PutMapping("/update-display-order")
+    public ResponseEntity<String> updateDisplayOrder(
+            @RequestParam("videoId") Long videoId,
+            @RequestParam("displayOrder") Integer displayOrder) {
+        try {
+            if (displayOrder < 1 || displayOrder > 7) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Display order must be between 1 and 7");
+            }
+            videoService.updateVideoDisplayOrder(videoId, displayOrder);
+            return ResponseEntity.ok("Updated video display order to " + displayOrder);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error updating display order: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Save video completion based on user's current day (new day-based system)
+     */
+    @PostMapping("/save-video-completion-by-day")
+    public ResponseEntity<String> saveVideoCompletionByDay(@RequestParam("email") String email) {
+        try {
+            videoService.recordVideoCompletionAndAdvance(email);
+            return ResponseEntity.ok("Recorded video completion for " + email);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error recording video completion: " + e.getMessage());
