@@ -30,6 +30,6 @@
     "eslint-config-next": "16.0.0"
   },
   "resolutions": {
-    "eslint-visitor-keys": "^5.1.0"
+    "eslint-visitor-keys": "^5.0.0"
   }
 }

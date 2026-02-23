@@ -108,8 +108,6 @@ export default function UserDashboard() {
             });
             if (res.ok) {
                 const data = await res.json();
-                console.log("Progress data received:", data); // Debug log
-                console.log("Current day from API:", data.currentDay); // Debug log
                 setProgress(data);
             }
         } catch (err) {

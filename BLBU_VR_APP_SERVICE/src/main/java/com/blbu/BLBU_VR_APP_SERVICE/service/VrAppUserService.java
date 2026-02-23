@@ -107,14 +107,6 @@ public class VrAppUserService {
         // Get user's current day
         Optional<VRAppUser> userOpt = vrAppUserRepository.findByEmail(email);
         int currentDay = userOpt.map(VRAppUser::getCurrentDay).orElse(1);
-        
-        // Debug logging
-        System.out.println("getUserProgress for " + email + ": currentDay = " + currentDay);
-        if (userOpt.isPresent()) {
-            System.out.println("User found, currentDay from entity: " + userOpt.get().getCurrentDay());
-        } else {
-            System.out.println("User not found, using default currentDay = 1");
-        }
 
         Map<String, Object> progress = new HashMap<>();
         progress.put("completedDates", completedDates);
