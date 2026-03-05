@@ -5,6 +5,7 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,14 +14,13 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VideoCompletion;
 import com.blbu.BLBU_VR_APP_SERVICE.model.VideoMetadata;
+import com.blbu.BLBU_VR_APP_SERVICE.repository.VRAppUserRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoCompletionRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoMetadataRepository;
 import com.blbu.BLBU_VR_APP_SERVICE.repository.VideoWatchEventRepository;
-import com.blbu.BLBU_VR_APP_SERVICE.repository.VRAppUserRepository;
-import com.blbu.BLBU_VR_APP_SERVICE.model.VRAppUser;
-import java.util.List;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.Blob;
@@ -305,19 +305,30 @@ public class VideoService {
      * Day 13-14: Video with displayOrder=7
      */
     public VideoMetadata getVideoForUserDay(String email) {
-        VRAppUser user = vrAppUserRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        Optional<VRAppUser> userOpt = vrAppUserRepository.findByEmail(email);
         
+        VRAppUser user;
+        if (userOpt.isEmpty()) {
+            // Check if user exists in users table (might be an old user or admin)
+            // For now, throw a clear error - user should be created through registration
+            throw new RuntimeException("User not found in system: " + email + ". Please register first.");
+        }
+        
+        user = userOpt.get();
         int currentDay = user.getCurrentDay();
         // Calculate which video order (1-7) based on day
         // Days 1-2 -> order 1, Days 3-4 -> order 2, etc.
         int videoOrder = ((currentDay - 1) / 2) + 1;
         
+        // Clamp videoOrder to valid range (1-7)
+        if (videoOrder < 1) videoOrder = 1;
+        if (videoOrder > 7) videoOrder = 7;
+        
         // Find video with this display order
         Optional<VideoMetadata> videoOpt = repository.findByDisplayOrder(videoOrder);
         
         if (videoOpt.isEmpty()) {
-            throw new RuntimeException("No video found with display order " + videoOrder + " for user day " + currentDay);
+            throw new RuntimeException("No video found with display order " + videoOrder + " for user day " + currentDay + ". Please ensure videos are uploaded and assigned orders 1-7.");
         }
         
         return videoOpt.get();

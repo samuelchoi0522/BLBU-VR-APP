@@ -25,6 +25,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health", "/health/**", "/api/**", "/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()  // Allow WebSocket connections
+                        .requestMatchers("/error", "/error/**").permitAll()  // Allow error pages
                         .anyRequest().authenticated()
                 )
 

@@ -41,7 +41,8 @@ export default function EditVideoModal({ open, onClose, video, onUpdated, videos
                 filename: video.filename,
                 title: title,
             });
-            if (displayOrder) {
+            // Only append displayOrder if it's a valid number (not empty string or null)
+            if (displayOrder && displayOrder !== "" && !isNaN(parseInt(displayOrder))) {
                 params.append("displayOrder", displayOrder);
             }
 
